@@ -47,7 +47,7 @@ with DAG(
     schedule=[asset_rattrapage],
     start_date=datetime.strptime(DAG_START_DATE, "%Y-%m-%d"),
     catchup=False,
-    tags=asset_metadata.get("tags", []),
+    tags=asset_rattrapage.metadata.get("tags", []),
 ) as dag:
 
     #  Valider le payload
@@ -136,9 +136,9 @@ with DAG(
         spark_ingest(artifact_paths, file_uploaded)
 
     # Mapping dynamique sur tous les fichiers
-    process_results = process_file.expand(**files_to_process)
+    process_results = process_file.expand_kwargs(files_to_process)
 
-    # Cleanup artefacts HDFS (optionnel)
+    # Cleanup artefacts HDFS 
     @task
     def cleanup_artifacts():
         webhdfs_hook = KnoxWebHDFSHook(conn_id="KNOX_REC")
