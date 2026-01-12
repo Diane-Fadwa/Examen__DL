@@ -137,3 +137,47 @@ with DAG(
 
     cleanup = cleanup_artifacts()
     process_results >> cleanup
+
+
+
+
+
+f.diane@PF5GNYP5 MINGW64 ~/Desktop/airflow-dags (assetRatt)
+$ git status
+On branch assetRatt
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        rattrapage/
+
+nothing added to commit but untracked files present (use "git add" to track)
+
+f.diane@PF5GNYP5 MINGW64 ~/Desktop/airflow-dags (assetRatt)
+$ git add .
+
+f.diane@PF5GNYP5 MINGW64 ~/Desktop/airflow-dags (assetRatt)
+$ git commit -m "dag_ratt"
+[assetRatt 85598ab] dag_ratt
+ Committer: DIANE FADWA <f.diane@attijariwafa.com>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly. Run the
+following command and follow the instructions in your editor to edit
+your configuration file:
+
+    git config --global --edit
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 2 files changed, 194 insertions(+)
+ create mode 100644 rattrapage/asset_rattrapage.py
+ create mode 100644 rattrapage/dag_rattrapage.py
+
+f.diane@PF5GNYP5 MINGW64 ~/Desktop/airflow-dags (assetRatt)
+$ git push origin assetRatt
+ssh: Could not resolve hostname gitlab.udd.attijariwafa.net: Name or service not known
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
