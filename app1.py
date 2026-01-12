@@ -1,4 +1,4 @@
-
+tags=asset_metadata.get("tags", [])
 
 
 
