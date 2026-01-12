@@ -11,14 +11,13 @@ from config import NAMENODE, OCP_DAGS_FOLDER_PREFIX
 
 logger = logging.getLogger(__name__)
 
-# =======================
+
 # Asset de rattrapage
-# =======================
+
 asset_rattrapage = Asset("replay://rattrapage")
 
-# =======================
 # Validation JSON de l'Asset
-# =======================
+
 @task
 def validate_rattrapage_payload(asset_event):
     """
@@ -37,9 +36,8 @@ def validate_rattrapage_payload(asset_event):
         raise ValueError("'files' list is empty")
     return payload
 
-# =======================
 # DAG de Rattrapage
-# =======================
+
 with DAG(
     dag_id="dag_rattrapage",
     description="DAG de rattrapage à la demande via Asset replay://rattrapage",
@@ -50,19 +48,18 @@ with DAG(
     tags=asset_rattrapage.metadata.get("tags", []),
 ) as dag:
 
-    # 1️⃣ Valider le payload
+    # Valider le payload
     payload = validate_rattrapage_payload(asset_rattrapage)
 
-    # 2️⃣ Préparer les fichiers pour Dynamic Task Mapping
+    # Préparer les fichiers pour Dynamic Task Mapping
     @task
     def explode_files(payload):
         return [{"contract_path": payload["contract_path"], "file_path": f} for f in payload["files"]]
 
     files_to_process = explode_files(payload)
 
-    # =======================
     # Task Group pour chaque fichier
-    # =======================
+
     @task_group
     def process_file(contract_path: str, file_path: str):
         """
@@ -75,7 +72,7 @@ with DAG(
         pyspark_script_local = f"{OCP_DAGS_FOLDER_PREFIX}/scripts/check_meta_from_contract.py"
         pyspark_script_hdfs_path = f"{artifacts_dir}/check_meta_from_contract.py"
 
-        # 1️⃣ Upload contract + script PySpark sur HDFS
+        # Upload contract + script PySpark sur HDFS
         @task
         def upload_artifacts():
             webhdfs_hook = KnoxWebHDFSHook(conn_id="KNOX_REC")
@@ -90,7 +87,7 @@ with DAG(
 
             return {"contract_hdfs_path": contract_hdfs_path, "script_hdfs_path": pyspark_script_hdfs_path}
 
-        # 2️⃣ Spark validation + ingestion via Livy
+        # Spark validation + ingestion via Livy
         @task
         def spark_ingest(artifact_paths, hdfs_file_path):
             livy_hook = KnoxLivyHook(conn_id="KNOX_REC")
@@ -126,10 +123,10 @@ with DAG(
         artifact_paths = upload_artifacts()
         spark_ingest(artifact_paths, file_path)  # file_path est déjà sur HDFS
 
-    # 3️⃣ Mapping dynamique sur tous les fichiers
+    # Mapping dynamique sur tous les fichiers
     process_results = process_file.expand(**files_to_process)
 
-    # 4️⃣ Cleanup artefacts HDFS (optionnel)
+    # Cleanup artefacts HDFS (optionnel)
     @task
     def cleanup_artifacts():
         webhdfs_hook = KnoxWebHDFSHook(conn_id="KNOX_REC")
