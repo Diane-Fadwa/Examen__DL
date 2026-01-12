@@ -1,25 +1,24 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
 import random
 
 from airflow.sdk import DAG, Asset, task, task_group
 
 from awb_lib.providers.knox.hooks.knox_livy_hook import KnoxLivyHook
 from awb_lib.providers.knox.hooks.knox_webhdfs_hook import KnoxWebHDFSHook
-from config import NAMENODE, PUT_HDFS_POOL, OCP_DAGS_FOLDER_PREFIX
-
-from dags.ingestion.dag_factory_utils import upload_file_to_hdfs
+from config import NAMENODE, OCP_DAGS_FOLDER_PREFIX
 
 logger = logging.getLogger(__name__)
 
+# =======================
 # Asset de rattrapage
-
+# =======================
 asset_rattrapage = Asset("replay://rattrapage")
 
+# =======================
 # Validation JSON de l'Asset
-
+# =======================
 @task
 def validate_rattrapage_payload(asset_event):
     """
@@ -38,8 +37,9 @@ def validate_rattrapage_payload(asset_event):
         raise ValueError("'files' list is empty")
     return payload
 
-# DAG de Ratt
-
+# =======================
+# DAG de Rattrapage
+# =======================
 with DAG(
     dag_id="dag_rattrapage",
     description="DAG de rattrapage à la demande via Asset replay://rattrapage",
@@ -50,18 +50,19 @@ with DAG(
     tags=asset_rattrapage.metadata.get("tags", []),
 ) as dag:
 
-    #  Valider le payload
+    # 1️⃣ Valider le payload
     payload = validate_rattrapage_payload(asset_rattrapage)
 
-    #  Préparer les fichiers (pour la boucle)
+    # 2️⃣ Préparer les fichiers pour Dynamic Task Mapping
     @task
     def explode_files(payload):
         return [{"contract_path": payload["contract_path"], "file_path": f} for f in payload["files"]]
 
     files_to_process = explode_files(payload)
 
-    # pour chaque fichier
-
+    # =======================
+    # Task Group pour chaque fichier
+    # =======================
     @task_group
     def process_file(contract_path: str, file_path: str):
         """
@@ -74,7 +75,7 @@ with DAG(
         pyspark_script_local = f"{OCP_DAGS_FOLDER_PREFIX}/scripts/check_meta_from_contract.py"
         pyspark_script_hdfs_path = f"{artifacts_dir}/check_meta_from_contract.py"
 
-        #  Upload contract + script PySpark sur HDFS
+        # 1️⃣ Upload contract + script PySpark sur HDFS
         @task
         def upload_artifacts():
             webhdfs_hook = KnoxWebHDFSHook(conn_id="KNOX_REC")
@@ -89,21 +90,12 @@ with DAG(
 
             return {"contract_hdfs_path": contract_hdfs_path, "script_hdfs_path": pyspark_script_hdfs_path}
 
-        #  Upload fichier raw sur HDFS
-
-        @task(pool=PUT_HDFS_POOL)
-        def upload_file(file_path):
-            metadata_output = {}  # tu peux ajouter info ou date
-            return upload_file_to_hdfs(file_path, metadata_output)
-
-        # Spark validation + ingestion via Livy
+        # 2️⃣ Spark validation + ingestion via Livy
         @task
-        def spark_ingest(artifact_paths, upload_result):
-            hdfs_file_path = upload_result.get("hdfs_file_path", file_path)
+        def spark_ingest(artifact_paths, hdfs_file_path):
             livy_hook = KnoxLivyHook(conn_id="KNOX_REC")
 
-            job_name = f"rattrapage_{Path(file_path).stem}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{random.randint(1000,9999)}"
-
+            job_name = f"rattrapage_{Path(hdfs_file_path).stem}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{random.randint(1000,9999)}"
             logger.info(f"Submitting Spark job {job_name} for file {hdfs_file_path}")
 
             batch_id = livy_hook.post_batch(
@@ -132,13 +124,12 @@ with DAG(
             return {"batch_id": batch_id, "file": hdfs_file_path, "state": final_state.value}
 
         artifact_paths = upload_artifacts()
-        file_uploaded = upload_file(file_path)
-        spark_ingest(artifact_paths, file_uploaded)
+        spark_ingest(artifact_paths, file_path)  # file_path est déjà sur HDFS
 
-    # Mapping dynamique sur tous les fichiers
-    process_results = process_file.expand_kwargs(files_to_process)
+    # 3️⃣ Mapping dynamique sur tous les fichiers
+    process_results = process_file.expand(**files_to_process)
 
-    # Cleanup artefacts HDFS 
+    # 4️⃣ Cleanup artefacts HDFS (optionnel)
     @task
     def cleanup_artifacts():
         webhdfs_hook = KnoxWebHDFSHook(conn_id="KNOX_REC")
