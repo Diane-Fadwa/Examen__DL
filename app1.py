@@ -1,60 +1,3 @@
-tags=asset_metadata.get("tags", [])
-
-
-
-start_date=datetime.strptime(DAG_START_DATE, "%Y-%m-%d"
-
-
-
-import logging
-from airflow.sdk.asset import Asset
-from airflow.decorators import task
-
-logger = logging.getLogger(__name__)
-
-# =======================
-# Définition de l'Asset de rattrapage
-# =======================
-# L'Asset est un replay à la demande pour déclencher le DAG de rattrapage
-asset_rattrapage = Asset("replay://rattrapage")
-
-# =======================
-# Task pour valider le JSON de l'Asset
-# =======================
-@task
-def validate_rattrapage_payload(asset_event):
-    """
-    Valide que l'event reçu respecte le template JSON attendu pour rattrapage :
-
-    {
-        "contract_path": "hdfs://.../contract.yml",
-        "files": ["/raw/file1.txt", "/raw/file2.txt", ...]
-    }
-
-    :param asset_event: l'objet Asset reçu par le DAG
-    :return: payload validé
-    """
-    payload = asset_event.extra
-
-    # Vérification des clés obligatoires
-    if "contract_path" not in payload:
-        raise ValueError("Missing 'contract_path' in Asset JSON")
-
-    if "files" not in payload:
-        raise ValueError("Missing 'files' in Asset JSON")
-
-    if not isinstance(payload["files"], list):
-        raise ValueError("'files' must be a list in Asset JSON")
-
-    if len(payload["files"]) == 0:
-        raise ValueError("'files' list is empty in Asset JSON")
-
-    logger.info("Rattrapage Asset validated: %d files", len(payload["files"]))
-    return payload
-
-
-
-
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -71,14 +14,12 @@ from dags.ingestion.dag_factory_utils import upload_file_to_hdfs
 
 logger = logging.getLogger(__name__)
 
-# =======================
 # Asset de rattrapage
-# =======================
+
 asset_rattrapage = Asset("replay://rattrapage")
 
-# =======================
 # Validation JSON de l'Asset
-# =======================
+
 @task
 def validate_rattrapage_payload(asset_event):
     """
@@ -97,32 +38,30 @@ def validate_rattrapage_payload(asset_event):
         raise ValueError("'files' list is empty")
     return payload
 
-# =======================
-# DAG de Rattrapage
-# =======================
+# DAG de Ratt
+
 with DAG(
-    dag_id="dag_rattrapage_final",
+    dag_id="dag_rattrapage",
     description="DAG de rattrapage à la demande via Asset replay://rattrapage",
     default_args={"owner": "airflow", "depends_on_past": False, "retries": 1},
     schedule=[asset_rattrapage],
-    start_date=datetime(2026, 1, 1),
+    start_date=datetime.strptime(DAG_START_DATE, "%Y-%m-%d"),
     catchup=False,
-    tags=["rattrapage", "manual", "dynamic"],
+    tags=asset_metadata.get("tags", []),
 ) as dag:
 
-    # 1️⃣ Valider le payload
+    #  Valider le payload
     payload = validate_rattrapage_payload(asset_rattrapage)
 
-    # 2️⃣ Préparer les fichiers pour Dynamic Task Mapping
+    #  Préparer les fichiers (pour la boucle)
     @task
     def explode_files(payload):
         return [{"contract_path": payload["contract_path"], "file_path": f} for f in payload["files"]]
 
     files_to_process = explode_files(payload)
 
-    # =======================
-    # Task Group pour chaque fichier
-    # =======================
+    # pour chaque fichier
+
     @task_group
     def process_file(contract_path: str, file_path: str):
         """
@@ -135,7 +74,7 @@ with DAG(
         pyspark_script_local = f"{OCP_DAGS_FOLDER_PREFIX}/scripts/check_meta_from_contract.py"
         pyspark_script_hdfs_path = f"{artifacts_dir}/check_meta_from_contract.py"
 
-        # 1️⃣ Upload contract + script PySpark sur HDFS
+        #  Upload contract + script PySpark sur HDFS
         @task
         def upload_artifacts():
             webhdfs_hook = KnoxWebHDFSHook(conn_id="KNOX_REC")
@@ -150,13 +89,14 @@ with DAG(
 
             return {"contract_hdfs_path": contract_hdfs_path, "script_hdfs_path": pyspark_script_hdfs_path}
 
-        # 2️⃣ Upload fichier raw sur HDFS
+        #  Upload fichier raw sur HDFS
+
         @task(pool=PUT_HDFS_POOL)
         def upload_file(file_path):
             metadata_output = {}  # tu peux ajouter info ou date
             return upload_file_to_hdfs(file_path, metadata_output)
 
-        # 3️⃣ Spark validation + ingestion via Livy
+        # Spark validation + ingestion via Livy
         @task
         def spark_ingest(artifact_paths, upload_result):
             hdfs_file_path = upload_result.get("hdfs_file_path", file_path)
@@ -195,10 +135,10 @@ with DAG(
         file_uploaded = upload_file(file_path)
         spark_ingest(artifact_paths, file_uploaded)
 
-    # 4️⃣ Mapping dynamique sur tous les fichiers
+    # Mapping dynamique sur tous les fichiers
     process_results = process_file.expand(**files_to_process)
 
-    # 5️⃣ Cleanup artefacts HDFS (optionnel)
+    # Cleanup artefacts HDFS (optionnel)
     @task
     def cleanup_artifacts():
         webhdfs_hook = KnoxWebHDFSHook(conn_id="KNOX_REC")
