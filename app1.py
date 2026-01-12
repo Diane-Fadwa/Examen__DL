@@ -1,29 +1,18 @@
-
-f.diane@PF5GNYP5 MINGW64 ~/Desktop/airflow-dags (assetRatt)
-$ git remote -v
-origin  git@gitlab.udd.attijariwafa.net:devops/airflow-dags.git (fetch)
-origin  git@gitlab.udd.attijariwafa.net:devops/airflow-dags.git (push)
-
-
-
-
-
-
-
-
 import logging
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List
 import random
 
 from airflow.sdk import DAG, Asset, task, task_group
 
 from awb_lib.providers.knox.hooks.knox_livy_hook import KnoxLivyHook
 from awb_lib.providers.knox.hooks.knox_webhdfs_hook import KnoxWebHDFSHook
-from config import NAMENODE, OCP_DAGS_FOLDER_PREFIX
+from config import NAMENODE, PUT_HDFS_POOL, OCP_DAGS_FOLDER_PREFIX
+
+from dags.ingestion.dag_factory_utils import upload_file_to_hdfs
 
 logger = logging.getLogger(__name__)
-
 
 # Asset de rattrapage
 
@@ -49,7 +38,7 @@ def validate_rattrapage_payload(asset_event):
         raise ValueError("'files' list is empty")
     return payload
 
-# DAG de Rattrapage
+# DAG de Ratt
 
 with DAG(
     dag_id="dag_rattrapage",
@@ -61,17 +50,17 @@ with DAG(
     tags=asset_rattrapage.metadata.get("tags", []),
 ) as dag:
 
-    # Valider le payload
+    #  Valider le payload
     payload = validate_rattrapage_payload(asset_rattrapage)
 
-    # Préparer les fichiers pour Dynamic Task Mapping
+    #  Préparer les fichiers (pour la boucle)
     @task
     def explode_files(payload):
         return [{"contract_path": payload["contract_path"], "file_path": f} for f in payload["files"]]
 
     files_to_process = explode_files(payload)
 
-    # Task Group pour chaque fichier
+    # pour chaque fichier
 
     @task_group
     def process_file(contract_path: str, file_path: str):
@@ -85,7 +74,7 @@ with DAG(
         pyspark_script_local = f"{OCP_DAGS_FOLDER_PREFIX}/scripts/check_meta_from_contract.py"
         pyspark_script_hdfs_path = f"{artifacts_dir}/check_meta_from_contract.py"
 
-        # Upload contract + script PySpark sur HDFS
+        #  Upload contract + script PySpark sur HDFS
         @task
         def upload_artifacts():
             webhdfs_hook = KnoxWebHDFSHook(conn_id="KNOX_REC")
@@ -102,10 +91,12 @@ with DAG(
 
         # Spark validation + ingestion via Livy
         @task
-        def spark_ingest(artifact_paths, hdfs_file_path):
+        def spark_ingest(artifact_paths, upload_result):
+            hdfs_file_path = upload_result.get("hdfs_file_path", file_path)
             livy_hook = KnoxLivyHook(conn_id="KNOX_REC")
 
-            job_name = f"rattrapage_{Path(hdfs_file_path).stem}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{random.randint(1000,9999)}"
+            job_name = f"rattrapage_{Path(file_path).stem}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{random.randint(1000,9999)}"
+
             logger.info(f"Submitting Spark job {job_name} for file {hdfs_file_path}")
 
             batch_id = livy_hook.post_batch(
@@ -134,12 +125,13 @@ with DAG(
             return {"batch_id": batch_id, "file": hdfs_file_path, "state": final_state.value}
 
         artifact_paths = upload_artifacts()
-        spark_ingest(artifact_paths, file_path)  # file_path est déjà sur HDFS
+        file_uploaded = upload_file(file_path)
+        spark_ingest(artifact_paths, file_uploaded)
 
     # Mapping dynamique sur tous les fichiers
-    process_results = process_file.expand(**files_to_process)
+    process_results = process_file.expand_kwargs(files_to_process)
 
-    # Cleanup artefacts HDFS (optionnel)
+    # Cleanup artefacts HDFS 
     @task
     def cleanup_artifacts():
         webhdfs_hook = KnoxWebHDFSHook(conn_id="KNOX_REC")
@@ -150,47 +142,3 @@ with DAG(
 
     cleanup = cleanup_artifacts()
     process_results >> cleanup
-
-
-
-
-
-f.diane@PF5GNYP5 MINGW64 ~/Desktop/airflow-dags (assetRatt)
-$ git status
-On branch assetRatt
-Untracked files:
-  (use "git add <file>..." to include in what will be committed)
-        rattrapage/
-
-nothing added to commit but untracked files present (use "git add" to track)
-
-f.diane@PF5GNYP5 MINGW64 ~/Desktop/airflow-dags (assetRatt)
-$ git add .
-
-f.diane@PF5GNYP5 MINGW64 ~/Desktop/airflow-dags (assetRatt)
-$ git commit -m "dag_ratt"
-[assetRatt 85598ab] dag_ratt
- Committer: DIANE FADWA <f.diane@attijariwafa.com>
-Your name and email address were configured automatically based
-on your username and hostname. Please check that they are accurate.
-You can suppress this message by setting them explicitly. Run the
-following command and follow the instructions in your editor to edit
-your configuration file:
-
-    git config --global --edit
-
-After doing this, you may fix the identity used for this commit with:
-
-    git commit --amend --reset-author
-
- 2 files changed, 194 insertions(+)
- create mode 100644 rattrapage/asset_rattrapage.py
- create mode 100644 rattrapage/dag_rattrapage.py
-
-f.diane@PF5GNYP5 MINGW64 ~/Desktop/airflow-dags (assetRatt)
-$ git push origin assetRatt
-ssh: Could not resolve hostname gitlab.udd.attijariwafa.net: Name or service not known
-fatal: Could not read from remote repository.
-
-Please make sure you have the correct access rights
-and the repository exists.
