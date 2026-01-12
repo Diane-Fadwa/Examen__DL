@@ -1,3 +1,11 @@
+
+
+
+
+start_date=datetime.strptime(DAG_START_DATE, "%Y-%m-%d"
+
+
+
 import logging
 from airflow.sdk.asset import Asset
 from airflow.decorators import task
