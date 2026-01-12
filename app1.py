@@ -1,3 +1,16 @@
+
+f.diane@PF5GNYP5 MINGW64 ~/Desktop/airflow-dags (assetRatt)
+$ git remote -v
+origin  git@gitlab.udd.attijariwafa.net:devops/airflow-dags.git (fetch)
+origin  git@gitlab.udd.attijariwafa.net:devops/airflow-dags.git (push)
+
+
+
+
+
+
+
+
 import logging
 from datetime import datetime
 from pathlib import Path
