@@ -242,3 +242,19 @@ with DAG(
     # ========================================================
     process_file.expand_kwargs(files_to_process)
 
+
+
+
+Traceback (most recent call last):
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/opt/airflow/dags/repo/rattrapage/dag_rattrapage.py", line 66, in <module>
+    tags=asset_rattrapage.metadata.get("tags", ["rattrapage", "replay"]),
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Asset' object has no attribute 'metadata'
+
+
+Traceback (most recent call last):
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/opt/airflow/dags/repo/rattrapage/asset_rattrapage.py", line 2, in <module>
+    from airflow.sdk.asset import Asset
+ModuleNotFoundError: No module named 'airflow.sdk.asset'
