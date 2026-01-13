@@ -177,3 +177,21 @@ File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/standa
 File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/callback_runner.py", line 81 in run
 
 File "/opt/airflow/dags/repo/rattrapage/dag_rattrapage.py", line 35 in validate_rattrapage_payload
+
+
+
+
+def collect_files():
+            from datetime import date
+
+            current_date = date.today().strftime("%Y-%m-%d")
+            ctx = get_current_context()
+            files = []
+            events = ctx.get("triggering_asset_events")
+            for asset, asset_list in events.items():
+                payload = asset_list[0].extra
+                logger.info("Payload received: %s", payload)
+                paths_in_payload = [p.strip() for p in payload["path"].split(",")]
+                files.extend(paths_in_payload)
+            logger.info("Files to process: %s", files)
+
