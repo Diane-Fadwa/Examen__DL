@@ -63,7 +63,7 @@ with DAG(
     schedule=[asset_rattrapage],
     start_date=datetime(2026, 1, 1),
     catchup=False,
-    tags=asset_rattrapage.metadata.get("tags", ["rattrapage", "replay"]),
+    tags=["rattrapage", "replay"],
 ) as dag:
 
     #  Validation du JSON de l’Asset
@@ -156,42 +156,3 @@ with DAG(
     # 4. Mapping dynamique : 1 job Spark par fichier
 
     process_file.expand_kwargs(files_to_process)
-
-
-[2026-01-13, 10:53:37] ERROR - Task failed with exception: source="task"
-ValueError: Asset payload is empty
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py", line 920 in run
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py", line 1215 in _execute_task
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/operator.py", line 397 in wrapper
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/decorator.py", line 251 in execute
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/operator.py", line 397 in wrapper
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/standard/operators/python.py", line 216 in execute
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/standard/operators/python.py", line 239 in execute_callable
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/callback_runner.py", line 81 in run
-
-File "/opt/airflow/dags/repo/rattrapage/dag_rattrapage.py", line 35 in validate_rattrapage_payload
-
-
-
-
-def collect_files():
-            from datetime import date
-
-            current_date = date.today().strftime("%Y-%m-%d")
-            ctx = get_current_context()
-            files = []
-            events = ctx.get("triggering_asset_events")
-            for asset, asset_list in events.items():
-                payload = asset_list[0].extra
-                logger.info("Payload received: %s", payload)
-                paths_in_payload = [p.strip() for p in payload["path"].split(",")]
-                files.extend(paths_in_payload)
-            logger.info("Files to process: %s", files)
-
