@@ -145,86 +145,50 @@ with DAG(
 
 
 
- @task
-            def spark_validate_ingest(upload_result, file_path, raw_dir):
-                """Execute PySpark validation and ingestion via Livy."""
-                import os
-                from datetime import datetime
 
-                # Use the workflow_name from the closure (contract-level)
-                wf_name = workflow_name
 
-                # Build HDFS file path from raw_dir and file_path
-                filename = os.path.basename(file_path)
+import logging
 
-                # Check if upload_result contains the path
-                if "hdfs_file_path" in upload_result:
-                    hdfs_file_path = upload_result["hdfs_file_path"]
-                elif "output_file" in upload_result:
-                    hdfs_file_path = upload_result["output_file"]
-                else:
-                    # Fallback: construct from raw_dir
-                    hdfs_file_path = f"{raw_dir.rstrip('/')}/{filename}"
+from airflow.sdk import Asset, task
 
-                logger.info(f"Using HDFS file path: {hdfs_file_path}")
 
-                # Initialize Livy hook
-                livy_hook = KnoxLivyHook(conn_id="KNOX_REC")
+logger = logging.getLogger(__name__)
 
-                # Create unique job name using timestamp and filename
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:19]
-                # Add a random component for additional uniqueness
-                import random
+asset_rattrapage = Asset("replay://rattrapage")
 
-                random_suffix = random.randint(1000, 9999)
-                job_name = f"contract_ingestion_{wf_name}_{timestamp}_{random_suffix}"
 
-                logger.info(f"Submitting Spark job: {job_name}")
-                logger.info(f"Workflow: {wf_name}")
-                logger.info(f"Contract path: {contract_hdfs_path}")
-                logger.info(f"Input file: {hdfs_file_path}")
 
-                # Submit batch job
-                batch_id = livy_hook.post_batch(
-                    file=f"{namenode}{pyspark_script_hdfs_path}",
-                    name=job_name,
-                    args=[
-                        f"{namenode}{contract_hdfs_path}",
-                        f"{hdfs_file_path}",
-                    ],
-                    queue=queue,
-                    conf={
-                        "spark.sql.sources.partitionOverwriteMode": "dynamic",
-                        "spark.sql.adaptive.enabled": "true",
-                        "spark.dynamicAllocation.enabled": "true",
-                        "spark.dynamicAllocation.minExecutors": "2",
-                        "spark.dynamicAllocation.maxExecutors": "3",
-                    },
-                    driver_memory="1g",
-                    driver_cores=1,
-                    executor_memory="2g",
-                    executor_cores=2,
-                    num_executors=2,
-                )
+# validation du JSON de l'Asset e
 
-                logger.info(f"Batch submitted with ID: {batch_id}")
+@task
+def validate_rattrapage_payload(asset_event):
+    """
+    Valide que l'event reçu respecte le template JSON attendu pour rattrapage :
 
-                # Poll for completion
-                final_state = livy_hook.poll_for_completion(
-                    session_id=batch_id,
-                    polling_interval=30,
-                    max_polling_attempts=120,
-                )
+    {
+        "contract_path": "hdfs://.../contract.yml",
+        "files": ["/raw/file1.txt", "/raw/file2.txt", ...]
+    }
 
-                logger.info(f"Spark job completed with state: {final_state}")
+    :param asset_event: l'objet Asset reçu par le DAG
+    :return: payload validé
+    """
+    payload = asset_event.extra
 
-                return {
-                    "batch_id": batch_id,
-                    "final_state": final_state.value,
-                    "workflow_name": wf_name,
-                    "job_name": job_name,
-                }
+    # Vérification 
 
-            # Define task dependencies within the group
-            upload_result = upload_task(file_path, raw_dir, archive_path)
-            spark_validate_ingest(upload_result, file_path, raw_dir)
+    if "contract_path" not in payload:
+        raise ValueError("Missing 'contract_path' in Asset JSON")
+
+    if "files" not in payload:
+        raise ValueError("Missing 'files' in Asset JSON")
+
+    if not isinstance(payload["files"], list):
+        raise ValueError("'files' must be a list in Asset JSON")
+
+    if len(payload["files"]) == 0:
+        raise ValueError("'files' list is empty in Asset JSON")
+
+    logger.info("Rattrapage Asset validated: %d files", len(payload["files"]))
+    return payload
+
