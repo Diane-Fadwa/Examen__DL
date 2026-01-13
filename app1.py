@@ -1,108 +1,209 @@
 import logging
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, List
-import random
-
-from airflow.sdk import DAG, Asset, task, task_group
-
-from awb_lib.providers.knox.hooks.knox_livy_hook import KnoxLivyHook
-from awb_lib.providers.knox.hooks.knox_webhdfs_hook import KnoxWebHDFSHook
-from config import NAMENODE, PUT_HDFS_POOL, OCP_DAGS_FOLDER_PREFIX
-
-from dags.ingestion.dag_factory_utils import upload_file_to_hdfs
+from airflow.sdk import Asset, task
 
 logger = logging.getLogger(__name__)
 
-# Asset de rattrapage
-
+# ============================================================
+# Asset de rattrapage (replay trigger)
+# ============================================================
+# Cet Asset représente un événement externe qui déclenche
+# le DAG de rattrapage avec un JSON métier.
 asset_rattrapage = Asset("replay://rattrapage")
 
-# Validation JSON de l'Asset
 
+# ============================================================
+# Validation du payload JSON porté par l’Asset
+# ============================================================
 @task
 def validate_rattrapage_payload(asset_event):
     """
-    Assure que l'Asset JSON suit le template attendu:
+    Valide que l'event Asset contient un JSON conforme au contrat.
+
+    Format attendu :
+
     {
-        "contract_path": "path/contrat.yml",
-        "files": ["/raw/file1.txt", "/raw/file2.txt", ...]
+        "contract_path": "/contracts/client.yml",
+        "files": [
+            "/raw/file1.txt",
+            "/raw/file2.txt"
+        ]
+    }
+
+    :param asset_event: objet AssetEvent injecté par Airflow
+    :return: payload validé
+    """
+
+    payload = asset_event.extra
+
+    if not payload:
+        raise ValueError("Asset payload is empty")
+
+    if not isinstance(payload, dict):
+        raise ValueError("Asset payload must be a JSON object")
+
+    if "contract_path" not in payload:
+        raise ValueError("Missing 'contract_path' in Asset JSON")
+
+    if "files" not in payload:
+        raise ValueError("Missing 'files' in Asset JSON")
+
+    if not isinstance(payload["files"], list):
+        raise ValueError("'files' must be a list in Asset JSON")
+
+    if len(payload["files"]) == 0:
+        raise ValueError("'files' list is empty")
+
+    logger.info(
+        "Rattrapage Asset validated: contract=%s, %d files",
+        payload["contract_path"],
+        len(payload["files"]),
+    )
+
+    return payload
+
+
+
+import logging
+import random
+from datetime import datetime
+from pathlib import Path
+
+from airflow.sdk import DAG, Asset, task, task_group
+from awb_lib.providers.knox.hooks.knox_livy_hook import KnoxLivyHook
+from config import NAMENODE
+
+logger = logging.getLogger(__name__)
+
+# ============================================================
+# Asset de rattrapage (replay à la demande)
+# ============================================================
+# Déclenché par un event JSON externe
+# Exemple :
+# {
+#   "contract_path": "/contracts/client.yml",
+#   "files": [
+#       "/raw/client20250101.txt",
+#       "/raw/client20250202.txt"
+#   ]
+# }
+asset_rattrapage = Asset("replay://rattrapage")
+
+
+# ============================================================
+# Validation du JSON porté par l’Asset
+# ============================================================
+@task
+def validate_rattrapage_payload(asset_event):
+    """
+    Valide le JSON envoyé avec l'Asset.
+
+    Format attendu :
+    {
+        "contract_path": "/contracts/client.yml",
+        "files": [
+            "/raw/file1.txt",
+            "/raw/file2.txt"
+        ]
     }
     """
     payload = asset_event.extra
+
+    if not payload:
+        raise ValueError("Asset payload is empty")
+
     if "contract_path" not in payload:
         raise ValueError("Missing 'contract_path' in Asset JSON")
-    if "files" not in payload or not isinstance(payload["files"], list):
-        raise ValueError("'files' must be a list in Asset JSON")
+
+    if "files" not in payload:
+        raise ValueError("Missing 'files' in Asset JSON")
+
+    if not isinstance(payload["files"], list):
+        raise ValueError("'files' must be a list")
+
     if len(payload["files"]) == 0:
         raise ValueError("'files' list is empty")
+
+    logger.info(
+        "Rattrapage Asset validated: contract=%s, %d files",
+        payload["contract_path"],
+        len(payload["files"]),
+    )
+
     return payload
 
-# DAG de Ratt
 
+# ============================================================
+# DAG déclenché uniquement par l’Asset
+# ============================================================
 with DAG(
     dag_id="dag_rattrapage",
-    description="DAG de rattrapage à la demande via Asset replay://rattrapage",
+    description="DAG de rattrapage déclenché par Asset replay://rattrapage",
     default_args={"owner": "airflow", "depends_on_past": False, "retries": 1},
     schedule=[asset_rattrapage],
-    start_date=datetime.strptime("2026-01-12", "%Y-%m-%d"),
+    start_date=datetime(2026, 1, 1),
     catchup=False,
-    tags="RATT",
+    tags=asset_rattrapage.metadata.get("tags", ["rattrapage", "replay"]),
 ) as dag:
 
-    #  Valider le payload
+    # ========================================================
+    # 1. Validation du JSON de l’Asset
+    # ========================================================
     payload = validate_rattrapage_payload(asset_rattrapage)
 
-    #  Préparer les fichiers (pour la boucle)
+    # ========================================================
+    # 2. Explosion des fichiers pour mapping dynamique
+    # ========================================================
     @task
     def explode_files(payload):
-        return [{"contract_path": payload["contract_path"], "file_path": f} for f in payload["files"]]
+        """
+        Transforme le JSON Asset en liste de couples (contract, file)
+        pour le dynamic task mapping.
+        """
+        return [
+            {
+                "contract_path": payload["contract_path"],
+                "file_path": f,
+            }
+            for f in payload["files"]
+        ]
 
     files_to_process = explode_files(payload)
 
-    # pour chaque fichier
-
+    # ========================================================
+    # 3. Traitement d’un fichier (1 Spark job par fichier)
+    # ========================================================
     @task_group
     def process_file(contract_path: str, file_path: str):
         """
-        Chaque fichier passe par upload HDFS + check/ingestion via Livy.
+        Pipeline de rattrapage pour un fichier.
+        Le fichier est déjà présent dans HDFS.
         """
 
-        # Construire paths HDFS
-        artifacts_dir = f"/tmp/rattrapage/artifacts/{Path(file_path).stem}"
-        contract_hdfs_path = f"{artifacts_dir}/{Path(contract_path).name}"
-        pyspark_script_local = f"{OCP_DAGS_FOLDER_PREFIX}/scripts/check_meta_from_contract.py"
-        pyspark_script_hdfs_path = f"{artifacts_dir}/check_meta_from_contract.py"
-
-        #  Upload contract + script PySpark sur HDFS
         @task
-        def upload_artifacts():
-            webhdfs_hook = KnoxWebHDFSHook(conn_id="KNOX_REC")
-            logger.info(f"Creating artifacts directory: {artifacts_dir}")
-            webhdfs_hook.create_directory(artifacts_dir, overwrite=True)
+        def spark_validate_ingest(contract_path: str, file_path: str):
+            """
+            Lance un job Spark via Livy pour valider et ingérer
+            le fichier à partir du contrat fourni.
+            """
 
-            logger.info(f"Uploading contract: {contract_path} -> {contract_hdfs_path}")
-            webhdfs_hook.upload_file(contract_path, contract_hdfs_path, overwrite=True)
-
-            logger.info(f"Uploading PySpark script: {pyspark_script_local} -> {pyspark_script_hdfs_path}")
-            webhdfs_hook.upload_file(pyspark_script_local, pyspark_script_hdfs_path, overwrite=True)
-
-            return {"contract_hdfs_path": contract_hdfs_path, "script_hdfs_path": pyspark_script_hdfs_path}
-
-        # Spark validation + ingestion via Livy
-        @task
-        def spark_ingest(artifact_paths, upload_result):
-            hdfs_file_path = upload_result.get("hdfs_file_path", file_path)
             livy_hook = KnoxLivyHook(conn_id="KNOX_REC")
 
-            job_name = f"rattrapage_{Path(file_path).stem}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{random.randint(1000,9999)}"
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            random_suffix = random.randint(1000, 9999)
 
-            logger.info(f"Submitting Spark job {job_name} for file {hdfs_file_path}")
+            job_name = f"rattrapage_{Path(file_path).stem}_{timestamp}_{random_suffix}"
+
+            logger.info("Submitting Spark job %s", job_name)
+            logger.info("Contract HDFS path: %s", contract_path)
+            logger.info("Input HDFS file: %s", file_path)
 
             batch_id = livy_hook.post_batch(
-                file=f"{NAMENODE}{artifact_paths['script_hdfs_path']}",
+                file=f"{NAMENODE}/scripts/check_meta_from_contract.py",
                 name=job_name,
-                args=[f"{NAMENODE}{artifact_paths['contract_hdfs_path']}", f"{hdfs_file_path}"],
+                args=[
+                    f"{NAMENODE}{contract_path}",
+                    f"{NAMENODE}{file_path}",
+                ],
                 queue="default",
                 conf={
                     "spark.sql.sources.partitionOverwriteMode": "dynamic",
@@ -121,74 +222,23 @@ with DAG(
                 polling_interval=30,
                 max_polling_attempts=120,
             )
-            logger.info(f"Spark job {batch_id} completed: {final_state.value}")
-            return {"batch_id": batch_id, "file": hdfs_file_path, "state": final_state.value}
 
-        artifact_paths = upload_artifacts()
-        file_uploaded = upload_file(file_path)
-        spark_ingest(artifact_paths, file_uploaded)
+            logger.info(
+                "Spark job %s finished with state %s",
+                batch_id,
+                final_state.value,
+            )
 
-    # Mapping dynamique sur tous les fichiers
-    process_results = process_file.expand_kwargs(files_to_process)
+            return {
+                "batch_id": batch_id,
+                "file": file_path,
+                "state": final_state.value,
+            }
 
-    # Cleanup artefacts HDFS 
-    @task
-    def cleanup_artifacts():
-        webhdfs_hook = KnoxWebHDFSHook(conn_id="KNOX_REC")
-        cleanup_path = "/tmp/rattrapage/artifacts"
-        logger.info(f"Cleaning up HDFS artifacts directory: {cleanup_path}")
-        webhdfs_hook.delete_path(cleanup_path, recursive=True)
-        return {"status": "cleaned"}
+        spark_validate_ingest(contract_path, file_path)
 
-    cleanup = cleanup_artifacts()
-    process_results >> cleanup
-
-
-
-
-
-import logging
-
-from airflow.sdk import Asset, task
-
-
-logger = logging.getLogger(__name__)
-
-asset_rattrapage = Asset("replay://rattrapage")
-
-
-
-# validation du JSON de l'Asset e
-
-@task
-def validate_rattrapage_payload(asset_event):
-    """
-    Valide que l'event reçu respecte le template JSON attendu pour rattrapage :
-
-    {
-        "contract_path": "hdfs://.../contract.yml",
-        "files": ["/raw/file1.txt", "/raw/file2.txt", ...]
-    }
-
-    :param asset_event: l'objet Asset reçu par le DAG
-    :return: payload validé
-    """
-    payload = asset_event.extra
-
-    # Vérification 
-
-    if "contract_path" not in payload:
-        raise ValueError("Missing 'contract_path' in Asset JSON")
-
-    if "files" not in payload:
-        raise ValueError("Missing 'files' in Asset JSON")
-
-    if not isinstance(payload["files"], list):
-        raise ValueError("'files' must be a list in Asset JSON")
-
-    if len(payload["files"]) == 0:
-        raise ValueError("'files' list is empty in Asset JSON")
-
-    logger.info("Rattrapage Asset validated: %d files", len(payload["files"]))
-    return payload
+    # ========================================================
+    # 4. Mapping dynamique : 1 job Spark par fichier
+    # ========================================================
+    process_file.expand_kwargs(files_to_process)
 
