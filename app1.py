@@ -142,3 +142,89 @@ with DAG(
 
     cleanup = cleanup_artifacts()
     process_results >> cleanup
+
+
+
+ @task
+            def spark_validate_ingest(upload_result, file_path, raw_dir):
+                """Execute PySpark validation and ingestion via Livy."""
+                import os
+                from datetime import datetime
+
+                # Use the workflow_name from the closure (contract-level)
+                wf_name = workflow_name
+
+                # Build HDFS file path from raw_dir and file_path
+                filename = os.path.basename(file_path)
+
+                # Check if upload_result contains the path
+                if "hdfs_file_path" in upload_result:
+                    hdfs_file_path = upload_result["hdfs_file_path"]
+                elif "output_file" in upload_result:
+                    hdfs_file_path = upload_result["output_file"]
+                else:
+                    # Fallback: construct from raw_dir
+                    hdfs_file_path = f"{raw_dir.rstrip('/')}/{filename}"
+
+                logger.info(f"Using HDFS file path: {hdfs_file_path}")
+
+                # Initialize Livy hook
+                livy_hook = KnoxLivyHook(conn_id="KNOX_REC")
+
+                # Create unique job name using timestamp and filename
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:19]
+                # Add a random component for additional uniqueness
+                import random
+
+                random_suffix = random.randint(1000, 9999)
+                job_name = f"contract_ingestion_{wf_name}_{timestamp}_{random_suffix}"
+
+                logger.info(f"Submitting Spark job: {job_name}")
+                logger.info(f"Workflow: {wf_name}")
+                logger.info(f"Contract path: {contract_hdfs_path}")
+                logger.info(f"Input file: {hdfs_file_path}")
+
+                # Submit batch job
+                batch_id = livy_hook.post_batch(
+                    file=f"{namenode}{pyspark_script_hdfs_path}",
+                    name=job_name,
+                    args=[
+                        f"{namenode}{contract_hdfs_path}",
+                        f"{hdfs_file_path}",
+                    ],
+                    queue=queue,
+                    conf={
+                        "spark.sql.sources.partitionOverwriteMode": "dynamic",
+                        "spark.sql.adaptive.enabled": "true",
+                        "spark.dynamicAllocation.enabled": "true",
+                        "spark.dynamicAllocation.minExecutors": "2",
+                        "spark.dynamicAllocation.maxExecutors": "3",
+                    },
+                    driver_memory="1g",
+                    driver_cores=1,
+                    executor_memory="2g",
+                    executor_cores=2,
+                    num_executors=2,
+                )
+
+                logger.info(f"Batch submitted with ID: {batch_id}")
+
+                # Poll for completion
+                final_state = livy_hook.poll_for_completion(
+                    session_id=batch_id,
+                    polling_interval=30,
+                    max_polling_attempts=120,
+                )
+
+                logger.info(f"Spark job completed with state: {final_state}")
+
+                return {
+                    "batch_id": batch_id,
+                    "final_state": final_state.value,
+                    "workflow_name": wf_name,
+                    "job_name": job_name,
+                }
+
+            # Define task dependencies within the group
+            upload_result = upload_task(file_path, raw_dir, archive_path)
+            spark_validate_ingest(upload_result, file_path, raw_dir)
