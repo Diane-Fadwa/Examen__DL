@@ -2,40 +2,47 @@ import logging
 import random
 from datetime import datetime
 from pathlib import Path
-from airflow.datasets import Dataset
 
-from airflow.sdk import DAG, task, task_group
+from airflow import DAG
+from airflow.decorators import task, task_group
+from airflow.datasets import Dataset
 from airflow.operators.python import get_current_context
 from awb_lib.providers.knox.hooks.knox_livy_hook import KnoxLivyHook
 from config import NAMENODE
 
 logger = logging.getLogger(__name__)
 
-# Asset de rattrapage (replay à la demande)
+# ============================================================
+# Dataset de rattrapage (replay à la demande)
+# ============================================================
+asset_rattrapage = Dataset("replay://rattrapage")
 
-asset_rattrapage = Asset("replay://rattrapage")
-
-# Validation du JSON porté par l’Asset
-
+# ============================================================
+# Validation du JSON porté par le Dataset
+# ============================================================
 @task
 def validate_rattrapage_payload():
     """
-    Valide le JSON envoyé avec l'Asset via le contexte Airflow.
+    Valide le JSON envoyé via le DatasetEvent.
+    Format attendu :
+    {
+        "contract_path": "/contracts/client.yml",
+        "files": ["/raw/file1.txt", "/raw/file2.txt"]
+    }
     """
     ctx = get_current_context()
-    events = ctx.get("triggering_asset_events", {})
+    events = ctx.get("dataset_events", [])
 
-    if not events or asset_rattrapage not in events:
-        raise ValueError("No triggering asset event found for replay://rattrapage")
+    if not events:
+        raise ValueError("No DatasetEvent found for replay://rattrapage")
 
-    asset_event = events[asset_rattrapage][0]
-    payload = asset_event.extra
+    dataset_event = events[0]
+    payload = dataset_event.extra
 
     if not isinstance(payload, dict):
         raise ValueError("Asset payload must be a JSON object")
-        
+
     # contract_path
-    
     if "contract_path" not in payload:
         raise ValueError("Missing 'contract_path' in Asset JSON")
 
@@ -44,9 +51,6 @@ def validate_rattrapage_payload():
     if not isinstance(contract_path, str):
         raise ValueError("'contract_path' must be a string")
 
-    if not contract_path.startswith("/"):
-        raise ValueError("'contract_path' must be an absolute path")
-
     if not contract_path.startswith("/contracts/"):
         raise ValueError("'contract_path' must be under /contracts/")
 
@@ -54,7 +58,6 @@ def validate_rattrapage_payload():
         raise ValueError("'contract_path' must be a YAML file")
 
     # files
-    
     if "files" not in payload:
         raise ValueError("Missing 'files' in Asset JSON")
 
@@ -69,8 +72,6 @@ def validate_rattrapage_payload():
     for f in files:
         if not isinstance(f, str):
             raise ValueError("Each file must be a string")
-        if not f.startswith("/"):
-            raise ValueError(f"File path must be absolute: {f}")
         if not f.startswith("/raw/"):
             raise ValueError(f"File must be under /raw/: {f}")
 
@@ -86,11 +87,12 @@ def validate_rattrapage_payload():
     }
 
 
-# DAG déclenché uniquement par l’Asset
-
+# ============================================================
+# DAG déclenché uniquement par le Dataset
+# ============================================================
 with DAG(
     dag_id="dag_rattrapage",
-    description="DAG de rattrapage déclenché par Asset replay://rattrapage",
+    description="DAG de rattrapage déclenché par Dataset replay://rattrapage",
     default_args={"owner": "airflow", "depends_on_past": False, "retries": 1},
     schedule=[asset_rattrapage],
     start_date=datetime(2026, 1, 1),
