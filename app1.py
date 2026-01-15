@@ -125,33 +125,3 @@ with DAG(
 
     # 4. Mapping dynamique : 1 job Spark par fichier
     process_file.expand_kwargs(files_to_process)
-
-
-
-
-
-{2 items
-"contract_path":"hello"
-"files":"raw"
-}
-
-
- ERROR - Task failed with exception: source="task"
-ValueError: 'files' must be a list
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py", line 920 in run
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py", line 1215 in _execute_task
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/operator.py", line 397 in wrapper
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/decorator.py", line 251 in execute
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/operator.py", line 397 in wrapper
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/standard/operators/python.py", line 216 in execute
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/standard/operators/python.py", line 239 in execute_callable
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/callback_runner.py", line 81 in run
-
-File "/opt/airflow/dags/repo/rattrapage/dag_rattrapage.py", line 44 in validate_rattrapage_payload
