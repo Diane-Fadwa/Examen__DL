@@ -25,34 +25,65 @@ def validate_rattrapage_payload():
     events = ctx.get("triggering_asset_events", {})
 
     if not events or asset_rattrapage not in events:
-        raise ValueError("No triggering asset event found for rattrapage")
+        raise ValueError("No triggering asset event found for replay://rattrapage")
 
-    # On prend le premier événement pour cet asset
     asset_event = events[asset_rattrapage][0]
     payload = asset_event.extra
 
-    if not payload:
-        raise ValueError("Asset payload is empty")
-
+    if not isinstance(payload, dict):
+        raise ValueError("Asset payload must be a JSON object")
+        
+    # contract_path
+    
     if "contract_path" not in payload:
         raise ValueError("Missing 'contract_path' in Asset JSON")
 
+    contract_path = payload["contract_path"]
+
+    if not isinstance(contract_path, str):
+        raise ValueError("'contract_path' must be a string")
+
+    if not contract_path.startswith("/"):
+        raise ValueError("'contract_path' must be an absolute path")
+
+    if not contract_path.startswith("/contracts/"):
+        raise ValueError("'contract_path' must be under /contracts/")
+
+    if not contract_path.endswith((".yml", ".yaml")):
+        raise ValueError("'contract_path' must be a YAML file")
+
+    # files
+    
     if "files" not in payload:
         raise ValueError("Missing 'files' in Asset JSON")
 
-    if not isinstance(payload["files"], list):
+    files = payload["files"]
+
+    if not isinstance(files, list):
         raise ValueError("'files' must be a list")
 
-    if len(payload["files"]) == 0:
+    if len(files) == 0:
         raise ValueError("'files' list is empty")
+
+    for f in files:
+        if not isinstance(f, str):
+            raise ValueError("Each file must be a string")
+        if not f.startswith("/"):
+            raise ValueError(f"File path must be absolute: {f}")
+        if not f.startswith("/raw/"):
+            raise ValueError(f"File must be under /raw/: {f}")
 
     logger.info(
         "Rattrapage Asset validated: contract=%s, %d files",
-        payload["contract_path"],
-        len(payload["files"]),
+        contract_path,
+        len(files),
     )
 
-    return payload
+    return {
+        "contract_path": contract_path,
+        "files": files,
+    }
+
 
 # DAG déclenché uniquement par l’Asset
 
