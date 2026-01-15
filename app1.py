@@ -1,40 +1,28 @@
 import logging
 from airflow.decorators import task
+from airflow.models.asset import Asset
+from airflow.decorators import get_current_context
 
 logger = logging.getLogger(__name__)
 
-#  payload JSON pour le rattrapage
+# ============================================================
+# Asset de rattrapage
+# ============================================================
 
-def get_rattrapage_payload():
-    """
-    Retourne le JSON attendu pour le rattrapage.
-    Exemple de format :
-    {
-        "contract_path": "/contracts/client.yml",
-        "files": [
-            "/raw/file1.txt",
-            "/raw/file2.txt"
-        ]
-    }
-    """
-    payload = {
-        "contract_path": "/contracts/client.yml",
-        "files": [
-            "/raw/file1.txt",
-            "/raw/file2.txt"
-        ],
-    }
-
-    return payload
+asset_rattrapage = Asset("replay://rattrapage")
 
 
-# Validation du JSON
+# ============================================================
+# Validation du payload porté par l'Asset
+# ============================================================
 
 @task
-def validate_rattrapage_payload(payload: dict):
+def validate_rattrapage_payload():
     """
-    Valide que le JSON reçu respecte le template attendu :
+    Récupère le JSON depuis l'AssetEvent.extra
+    et valide le contrat métier.
 
+    Format attendu :
     {
         "contract_path": "/contracts/client.yml",
         "files": [
@@ -42,31 +30,40 @@ def validate_rattrapage_payload(payload: dict):
             "/raw/file2.txt"
         ]
     }
-
-    :param payload: JSON à valider
-    :return: payload validé
     """
 
+    context = get_current_context()
+
+    if "asset_events" not in context or not context["asset_events"]:
+        raise ValueError("No AssetEvent found in context")
+
+    asset_event = context["asset_events"][0]
+    payload = asset_event.extra
+
     if not payload:
-        raise ValueError("Payload is empty")
+        raise ValueError("Asset payload is empty")
 
     if not isinstance(payload, dict):
-        raise ValueError("Payload must be a JSON object")
+        raise ValueError("Asset payload must be a JSON object")
 
     if "contract_path" not in payload:
-        raise ValueError("Missing 'contract_path' in payload")
+        raise ValueError("Missing 'contract_path' in Asset JSON")
 
     if "files" not in payload:
-        raise ValueError("Missing 'files' in payload")
+        raise ValueError("Missing 'files' in Asset JSON")
 
     if not isinstance(payload["files"], list):
-        raise ValueError("'files' must be a list in payload")
+        raise ValueError("'files' must be a list in Asset JSON")
 
     if len(payload["files"]) == 0:
         raise ValueError("'files' list is empty")
 
+    # Optionnel mais recommandé : validation du path
+    if not payload["contract_path"].startswith("/"):
+        raise ValueError("contract_path must be an absolute path")
+
     logger.info(
-        "Rattrapage payload validated: contract=%s, %d files",
+        "Rattrapage Asset validated: contract=%s, %d files",
         payload["contract_path"],
         len(payload["files"]),
     )
