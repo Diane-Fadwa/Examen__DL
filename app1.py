@@ -1,3 +1,11 @@
+Traceback (most recent call last):
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/opt/airflow/dags/repo/rattrapage/asset_ratt.py", line 6, in <module>
+    from airflow.datasets import Asset
+ImportError: cannot import name 'Asset' from 'airflow.datasets' (/home/airflow/.local/lib/python3.12/site-packages/airflow/datasets/__init__.py). Did you mean: 'assets'?
+
+
+
 import logging
 from airflow.decorators import task
 from airflow.datasets import Dataset
