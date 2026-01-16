@@ -1,3 +1,24 @@
+/opt/airflow/dags/repo/rattrapage/asset_ratt.py
+Timestamp: 2026-01-16, 09:37:01
+
+Traceback (most recent call last):
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/opt/airflow/dags/repo/rattrapage/asset_ratt.py", line 6, in <module>
+    from airflow.datasets import Asset
+ImportError: cannot import name 'Asset' from 'airflow.datasets' (/home/airflow/.local/lib/python3.12/site-packages/airflow/datasets/__init__.py). Did you mean: 'assets'?
+
+
+/opt/airflow/dags/repo/rattrapage/dag_rattrapage.py
+Timestamp: 2026-01-16, 09:37:01
+
+Traceback (most recent call last):
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/opt/airflow/dags/repo/rattrapage/dag_rattrapage.py", line 8, in <module>
+    from airflow.datasets import Asset
+ImportError: cannot import name 'Asset' from 'airflow.datasets' (/home/airflow/.local/lib/python3.12/site-packages/airflow/datasets/__init__.py). Did you mean: 'assets'?
+
+
+
 import logging
 from datetime import datetime
 
