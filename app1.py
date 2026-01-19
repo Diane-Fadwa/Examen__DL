@@ -1,41 +1,70 @@
-Log message source details: sources=["/opt/airflow/logs/dag_id=dag_rattrapage/run_id=asset_triggered__2026-01-19T08:35:19.400128+00:00_vzP6SbOt/task_id=validate_rattrapage_payload/attempt=1.log"]
-[2026-01-19, 09:35:26] INFO - DAG bundles loaded: dags-folder: source="airflow.dag_processing.bundles.manager.DagBundlesManager"
-[2026-01-19, 09:35:26] INFO - Filling up the DagBag from /opt/airflow/dags/repo/rattrapage/dag_rattrapage.py: source="airflow.models.dagbag.DagBag"
-[2026-01-19, 09:35:27] INFO - Triggering asset Asset(name='replay://rattrapage', uri='replay://rattrapage/', group='asset', extra={}, watchers=[]) payload: {'contract_path': 'Hey1', 'files': 'raw', 'from_rest_api': True}: source="unusual_prefix_eb329238963d72514d1fc4fc57b48c5803517fb6_dag_rattrapage"
-[2026-01-19, 09:35:27] ERROR - Task failed with exception: source="task"
-KeyError: 'asset_events'
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py", line 920 in run
+@task
+def validate_rattrapage_payload():
+    """
+    Récupère et valide le JSON depuis AssetEvent.extra
+    """
 
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py", line 1215 in _execute_task
+    ctx = get_current_context()
 
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/operator.py", line 397 in wrapper
+    events = ctx.get("triggering_asset_events")
 
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/decorator.py", line 251 in execute
+    if not events:
+        raise ValueError("No triggering asset events found")
 
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/operator.py", line 397 in wrapper
+    # 🔹 Récupération du DERNIER event publié pour replay://rattrapage
+    asset_events = events.get(asset_rattrapage)
 
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/standard/operators/python.py", line 216 in execute
+    if not asset_events:
+        raise ValueError("No events found for asset replay://rattrapage")
 
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/standard/operators/python.py", line 239 in execute_callable
+    payload = asset_events[-1].extra
 
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/callback_runner.py", line 81 in run
+    logger.info("Payload reçu depuis l'Asset : %s", payload)
 
-File "/opt/airflow/dags/repo/rattrapage/dag_rattrapage.py", line 48 in validate_rattrapage_payload
+    # ============================
+    # 🔒 VALIDATION MÉTIER (INCHANGÉE)
+    # ============================
 
-[2026-01-19, 09:35:35] ERROR - Top level error: source="task"
-AirflowRuntimeError: API_SERVER_ERROR: {'status_code': 404, 'message': 'Server returned error', 'detail': {'detail': {'reason': 'not_found', 'message': 'Task Instance not found'}}}
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py", line 1351 in main
+    if not isinstance(payload, dict):
+        raise ValueError("Asset payload must be a JSON object")
 
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py", line 999 in run
+    # contract_path
+    if "contract_path" not in payload:
+        raise ValueError("Missing 'contract_path'")
 
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/comms.py", line 204 in send
+    contract_path = payload["contract_path"]
 
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/comms.py", line 264 in _get_response
+    if not isinstance(contract_path, str):
+        raise ValueError("'contract_path' must be a string")
 
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/comms.py", line 251 in _from_frame
+    if not contract_path.startswith("/contracts/"):
+        raise ValueError("'contract_path' must be under /contracts/")
 
-[2026-01-19, 09:35:35] WARNING - Process exited abnormally: exit_code=1: source="task"
+    if not contract_path.endswith((".yml", ".yaml")):
+        raise ValueError("'contract_path' must be a YAML file")
 
+    # files
+    if "files" not in payload:
+        raise ValueError("Missing 'files'")
 
-"contract_path":"Hey2"
-"files":"raw"
+    files = payload["files"]
+
+    if not isinstance(files, list) or not files:
+        raise ValueError("'files' must be a non-empty list")
+
+    for f in files:
+        if not isinstance(f, str):
+            raise ValueError("Each file must be a string")
+        if not f.startswith("/raw/"):
+            raise ValueError(f"File must be under /raw/: {f}")
+
+    logger.info(
+        "Rattrapage validé : contract=%s | %d fichiers",
+        contract_path,
+        len(files),
+    )
+
+    return {
+        "contract_path": contract_path,
+        "files": files,
+    }
