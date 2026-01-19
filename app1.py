@@ -1,63 +1,41 @@
-import logging
-from airflow.sdk import Asset, task
-from airflow.operators.python import get_current_context
+Log message source details: sources=["/opt/airflow/logs/dag_id=dag_rattrapage/run_id=asset_triggered__2026-01-19T08:35:19.400128+00:00_vzP6SbOt/task_id=validate_rattrapage_payload/attempt=1.log"]
+[2026-01-19, 09:35:26] INFO - DAG bundles loaded: dags-folder: source="airflow.dag_processing.bundles.manager.DagBundlesManager"
+[2026-01-19, 09:35:26] INFO - Filling up the DagBag from /opt/airflow/dags/repo/rattrapage/dag_rattrapage.py: source="airflow.models.dagbag.DagBag"
+[2026-01-19, 09:35:27] INFO - Triggering asset Asset(name='replay://rattrapage', uri='replay://rattrapage/', group='asset', extra={}, watchers=[]) payload: {'contract_path': 'Hey1', 'files': 'raw', 'from_rest_api': True}: source="unusual_prefix_eb329238963d72514d1fc4fc57b48c5803517fb6_dag_rattrapage"
+[2026-01-19, 09:35:27] ERROR - Task failed with exception: source="task"
+KeyError: 'asset_events'
+File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py", line 920 in run
 
-logger = logging.getLogger(__name__)
+File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py", line 1215 in _execute_task
 
-# Asset de rattrapage 
+File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/operator.py", line 397 in wrapper
 
-asset_rattrapage = Asset("replay://rattrapage")
+File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/decorator.py", line 251 in execute
 
-# Validation du payload porté par l’Asset (publication)
+File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/operator.py", line 397 in wrapper
 
-@task
-def validate_rattrapage_payload():
-    """
-    Récupère le JSON depuis dag_run.conf (trigger manuel)
-    et sécurise le payload AVANT publication de l’Asset.
+File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/standard/operators/python.py", line 216 in execute
 
-    Format attendu :
-    {
-        "contract_path": "/contracts/client.yml",
-        "files": [
-            "/raw/file1.txt",
-            "/raw/file2.txt"
-        ]
-    }
+File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/standard/operators/python.py", line 239 in execute_callable
 
-     Validation volontairement légère ici :
-    - Sécurité structurelle
-    - Pas de validation métier lourde
-    """
+File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/callback_runner.py", line 81 in run
 
-    ctx = get_current_context()
+File "/opt/airflow/dags/repo/rattrapage/dag_rattrapage.py", line 48 in validate_rattrapage_payload
 
-    if "dag_run" not in ctx or not ctx["dag_run"].conf:
-        raise ValueError("No payload provided in dag_run.conf")
+[2026-01-19, 09:35:35] ERROR - Top level error: source="task"
+AirflowRuntimeError: API_SERVER_ERROR: {'status_code': 404, 'message': 'Server returned error', 'detail': {'detail': {'reason': 'not_found', 'message': 'Task Instance not found'}}}
+File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py", line 1351 in main
 
-    payload = ctx["dag_run"].conf
+File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py", line 999 in run
 
-    if not isinstance(payload, dict):
-        raise ValueError("Asset payload must be a JSON object")
+File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/comms.py", line 204 in send
 
-    # Champs obligatoires
-    if "contract_path" not in payload:
-        raise ValueError("Missing 'contract_path' in payload")
+File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/comms.py", line 264 in _get_response
 
-    if "files" not in payload:
-        raise ValueError("Missing 'files' in payload")
+File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/comms.py", line 251 in _from_frame
 
-    # Vérifications simples
-    if not isinstance(payload["contract_path"], str):
-        raise ValueError("'contract_path' must be a string")
+[2026-01-19, 09:35:35] WARNING - Process exited abnormally: exit_code=1: source="task"
 
-    if not isinstance(payload["files"], list) or not payload["files"]:
-        raise ValueError("'files' must be a non-empty list")
 
-    logger.info(
-        "Asset rattrapage validé pour publication : contract=%s | %d fichiers",
-        payload["contract_path"],
-        len(payload["files"]),
-    )
-
-    return payload
+"contract_path":"Hey2"
+"files":"raw"
