@@ -13,12 +13,15 @@ from config import NAMENODE
 
 logger = logging.getLogger(__name__)
 
-# Asset consommé 
+# ============================================================
+# Asset consommé (déclencheur du DAG)
+# ============================================================
 asset_rattrapage = Asset("replay://rattrapage")
 
 
+# ============================================================
 # 1. Validation du JSON porté par l’AssetEvent
-
+# ============================================================
 @task
 def validate_rattrapage_payload():
     """
@@ -33,25 +36,34 @@ def validate_rattrapage_payload():
         ]
     }
     """
+
+    # --------------------------------------------------
+    # RÉCUPÉRATION DU CONTEXTE ASSET (NE PAS MODIFIER)
+    # --------------------------------------------------
     ctx = get_current_context()
 
     events = ctx.get("triggering_asset_events")
     for asset, asset_list in events.items():
         payload = asset_list[0].extra
-        print(payload)
-    # Dernier event publié (cas où plusieurs replays)
+        logger.info("Triggering asset %s payload: %s", asset, payload)
+
+    # Dernier event publié pour l’asset replay://rattrapage
     asset_event = ctx["asset_events"][asset_rattrapage.uri][-1]
     payload = asset_event.extra
 
+    # --------------------------------------------------
+    # VALIDATION STRUCTURE GLOBALE
+    # --------------------------------------------------
     if not isinstance(payload, dict):
         raise ValueError("Asset payload must be a JSON object")
 
-    # contract_path
+    # --------------------------------------------------
+    # VALIDATION contract_path
+    # --------------------------------------------------
+    contract_path = payload.get("contract_path")
 
-    if "contract_path" not in payload:
+    if not contract_path:
         raise ValueError("Missing 'contract_path'")
-
-    contract_path = payload["contract_path"]
 
     if not isinstance(contract_path, str):
         raise ValueError("'contract_path' must be a string")
@@ -62,53 +74,70 @@ def validate_rattrapage_payload():
     if not contract_path.endswith((".yml", ".yaml")):
         raise ValueError("'contract_path' must be a YAML file")
 
-    # files
-
-    if "files" not in payload:
-        raise ValueError("Missing 'files'")
-
-    files = payload["files"]
+    # --------------------------------------------------
+    # VALIDATION files
+    # --------------------------------------------------
+    files = payload.get("files")
 
     if not isinstance(files, list) or not files:
         raise ValueError("'files' must be a non-empty list")
 
-    for f in files:
+    for idx, f in enumerate(files):
         if not isinstance(f, str):
-            raise ValueError("Each file must be a string")
+            raise ValueError(f"File at index {idx} is not a string")
+
         if not f.startswith("/raw/"):
             raise ValueError(f"File must be under /raw/: {f}")
 
     logger.info(
-        "Rattrapage validé : contract=%s | %d fichiers",
+        "Rattrapage validé avec succès | contract=%s | %d fichiers",
         contract_path,
         len(files),
     )
 
+    # Payload normalisé pour la suite du pipeline
     return {
         "contract_path": contract_path,
         "files": files,
     }
 
 
+# ============================================================
 # DAG déclenché UNIQUEMENT par l’Asset
-
+# ============================================================
 with DAG(
     dag_id="dag_rattrapage",
-    description="DAG de rattrapage déclenché par l'Asset replay://rattrapage",
+    description="DAG de rattrapage déclenché par l’Asset replay://rattrapage",
     start_date=datetime(2026, 1, 1),
-    schedule=[asset_rattrapage],   # CLÉ
+    schedule=[asset_rattrapage],  # 🔑 déclenchement par Asset
     catchup=False,
     default_args={"owner": "airflow", "retries": 1},
-    tags=["rattrapage", "asset"],
+    tags=["rattrapage", "asset", "replay"],
 ) as dag:
 
-    # 1. Validation du JSON Asset
+    # ========================================================
+    # 1. Validation du payload Asset
+    # ========================================================
     payload = validate_rattrapage_payload()
 
+    # ========================================================
     # 2. Explosion des fichiers (Dynamic Task Mapping)
-
+    # ========================================================
     @task
     def explode_files(payload: dict):
+        """
+        Transforme :
+        {
+            contract_path: "...",
+            files: [f1, f2, f3]
+        }
+        en :
+        [
+            {contract_path, file_path=f1},
+            {contract_path, file_path=f2},
+            ...
+        ]
+        """
         return [
             {
                 "contract_path": payload["contract_path"],
@@ -119,8 +148,9 @@ with DAG(
 
     files_to_process = explode_files(payload)
 
-    # 3. Traitement d’un fichier (1 Spark job = 1 fichier)
-
+    # ========================================================
+    # 3. Traitement d’un fichier (1 Spark job par fichier)
+    # ========================================================
     @task_group
     def process_file(contract_path: str, file_path: str):
 
@@ -136,6 +166,8 @@ with DAG(
             )
 
             logger.info("Submitting Spark job %s", job_name)
+            logger.info("Contract: %s", contract_path)
+            logger.info("Input file: %s", file_path)
 
             batch_id = livy_hook.post_batch(
                 file=f"{NAMENODE}/scripts/check_meta_from_contract.py",
@@ -177,5 +209,7 @@ with DAG(
 
         spark_validate_ingest(contract_path, file_path)
 
-    # 4. Mapping dynamique
+    # ========================================================
+    # 4. Mapping dynamique : 1 job Spark par fichier
+    # ========================================================
     process_file.expand_kwargs(files_to_process)
