@@ -14,40 +14,41 @@ from config import NAMENODE
 logger = logging.getLogger(__name__)
 
 # Asset consommé 
+
 asset_rattrapage = Asset("replay://rattrapage")
 
 
-# 1. Validation du JSON porté par l’AssetEvent
+#  Validation du JSON porté par l’AssetEvent
 
 @task
 def validate_rattrapage_payload():
     """
     Récupère et valide le JSON depuis AssetEvent.extra
-
-    Format attendu :
-    {
-        "contract_path": "/contracts/client.yml",
-        "files": [
-            "/raw/file1.txt",
-            "/raw/file2.txt"
-        ]
-    }
     """
+
     ctx = get_current_context()
 
     events = ctx.get("triggering_asset_events")
-    for asset, asset_list in events.items():
-        payload = asset_list[0].extra
-        print(payload)
-    # Dernier event publié (cas où plusieurs replays)
-    asset_event = ctx["asset_events"][asset_rattrapage.uri][-1]
-    payload = asset_event.extra
 
+    if not events:
+        raise ValueError("No triggering asset events found")
+
+    # Récupération du DERNIER event publié pour replay://rattrapage
+    asset_events = events.get(asset_rattrapage)
+
+    if not asset_events:
+        raise ValueError("No events found for asset replay://rattrapage")
+
+    payload = asset_events[-1].extra
+
+    logger.info("Payload reçu depuis l'Asset : %s", payload)
+
+    
+    #  VALIDATION MÉTIER 
     if not isinstance(payload, dict):
         raise ValueError("Asset payload must be a JSON object")
 
     # contract_path
-
     if "contract_path" not in payload:
         raise ValueError("Missing 'contract_path'")
 
@@ -63,7 +64,6 @@ def validate_rattrapage_payload():
         raise ValueError("'contract_path' must be a YAML file")
 
     # files
-
     if "files" not in payload:
         raise ValueError("Missing 'files'")
 
@@ -94,21 +94,35 @@ def validate_rattrapage_payload():
 
 with DAG(
     dag_id="dag_rattrapage",
-    description="DAG de rattrapage déclenché par l'Asset replay://rattrapage",
+    description="DAG de rattrapage déclenché par l’Asset replay://rattrapage",
     start_date=datetime(2026, 1, 1),
-    schedule=[asset_rattrapage],   # CLÉ
+    schedule=[asset_rattrapage],  
     catchup=False,
     default_args={"owner": "airflow", "retries": 1},
-    tags=["rattrapage", "asset"],
+    tags=["rattrapage", "asset", "replay"],
 ) as dag:
 
-    # 1. Validation du JSON Asset
+    # Validation du payload Asset
+
     payload = validate_rattrapage_payload()
 
-    # 2. Explosion des fichiers (Dynamic Task Mapping)
+    #  Explosion des fichiers (Dynamic Task Mapping)
 
     @task
     def explode_files(payload: dict):
+        """
+        Transforme :
+        {
+            contract_path: "...",
+            files: [f1, f2, f3]
+        }
+        en :
+        [
+            {contract_path, file_path=f1},
+            {contract_path, file_path=f2},
+            ...
+        ]
+        """
         return [
             {
                 "contract_path": payload["contract_path"],
@@ -119,7 +133,7 @@ with DAG(
 
     files_to_process = explode_files(payload)
 
-    # 3. Traitement d’un fichier (1 Spark job = 1 fichier)
+    # Traitement d’un fichier (1 Spark job par fichier)
 
     @task_group
     def process_file(contract_path: str, file_path: str):
@@ -136,6 +150,8 @@ with DAG(
             )
 
             logger.info("Submitting Spark job %s", job_name)
+            logger.info("Contract: %s", contract_path)
+            logger.info("Input file: %s", file_path)
 
             batch_id = livy_hook.post_batch(
                 file=f"{NAMENODE}/scripts/check_meta_from_contract.py",
@@ -177,5 +193,6 @@ with DAG(
 
         spark_validate_ingest(contract_path, file_path)
 
-    # 4. Mapping dynamique
+    # Mapping dynamique : 1 job Spark par fichier
+
     process_file.expand_kwargs(files_to_process)
