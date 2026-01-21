@@ -1,3 +1,8 @@
+[2026-01-20, 16:08:14] INFO - Submitting Livy batch with config: {'file': 'nameservice1/scripts/check_meta_from_contract.py', 'queue': 'default', 'name': 'rattrapage_ebk_web_device_history_20250501_20260120_150814_2784', 'args': ['nameservice1hdfs://nameservice1/tmp/contract_ebk_web_device_history.yml', 'nameservice1hdfs://nameservice1/raw/ebk_web_device_history/16-Jan-2026/ebk_web_device_history_20250501.txt'], 'driverMemory': '1g', 'driverCores': 1, 'executorMemory': '2g', 'executorCores': 2, 'numExecutors': 2, 'conf': {'spark.sql.sources.partitionOverwriteMode': 'dynamic', 'spark.sql.adaptive.enabled': 'true', 'spark.dynamicAllocation.enabled': 'true'}}: source="airflow.task.hooks.awb_lib.providers.knox.hooks.knox_livy_hook.KnoxLivyHook"
+[2026-01-20, 16:08:14] WARNING - /home/airflow/.local/lib/python3.12/site-packages/airflow/models/connection.py:471: DeprecationWarning: Using Connection.get_connection_from_secrets from `airflow.models` is deprecated.Please use `get` on Connection from sdk(`airflow.sdk.Connection`) instead
+  warnings.warn(
+
+
 import logging
 import random
 from datetime import datetime
@@ -13,16 +18,11 @@ from config import NAMENODE
 
 logger = logging.getLogger(__name__)
 
-# ======================
 # Asset consommé
-# ======================
 
 asset_rattrapage = Asset("replay://rattrapage")
 
-
-# ======================
 # Validation du JSON porté par l’AssetEvent
-# ======================
 
 @task
 def validate_rattrapage_payload():
@@ -51,9 +51,7 @@ def validate_rattrapage_payload():
     payload = asset_events[-1].extra
     logger.info("Payload reçu depuis l'Asset : %s", payload)
 
-    # ======================
-    # VALIDATION (MODIFIÉE POUR HDFS)
-    # ======================
+    # VALIDATION 
 
     if not isinstance(payload, dict):
         raise ValueError("Asset payload must be a JSON object")
@@ -101,9 +99,7 @@ def validate_rattrapage_payload():
     }
 
 
-# ======================
 # DAG déclenché UNIQUEMENT par l’Asset
-# ======================
 
 with DAG(
     dag_id="dag_rattrapage",
@@ -118,9 +114,7 @@ with DAG(
     # Validation du payload Asset
     payload = validate_rattrapage_payload()
 
-    # ======================
     # Explosion des fichiers (Dynamic Task Mapping)
-    # ======================
 
     @task
     def explode_files(payload: dict):
@@ -134,9 +128,7 @@ with DAG(
 
     files_to_process = explode_files(payload)
 
-    # ======================
     # Traitement d’un fichier (1 Spark job par fichier)
-    # ======================
 
     @task_group
     def process_file(contract_path: str, file_path: str):
@@ -157,7 +149,7 @@ with DAG(
             logger.info("Input file: %s", file_path)
 
             batch_id = livy_hook.post_batch(
-                file=f"{NAMENODE}/scripts/check_meta_from_contract.py",
+                file=f"hdfs://nameservice1/awb_rec/awb_ingestion/artifacts/ebk_web_device_history/check_meta_from_contract.py",
                 name=job_name,
                 args=[
                     f"{NAMENODE}{contract_path}",
@@ -198,3 +190,4 @@ with DAG(
 
     # Mapping dynamique : 1 job Spark par fichier
     process_file.expand_kwargs(files_to_process)
+    
