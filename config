@@ -942,3 +942,7 @@ Found 2 items
 -rw-r--r--   3 airflow supergroup      31058 2026-01-16 16:08 /awb_rec/awb_ingestion/artifacts/ebk_web_device_history/check_meta_from_contract.py
 -rw-r--r--   3 airflow supergroup       4594 2026-01-16 16:08 /awb_rec/awb_ingestion/artifacts/ebk_web_device_history/contract_ebk_web_device_history.yml
 [cdprct@cdp-gateway-01-rct FDIA]$
+
+
+
+select max(`time`) from orc_ebk_web_device_history;
