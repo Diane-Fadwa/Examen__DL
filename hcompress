@@ -46,3 +46,7 @@ optional arguments:
                         Compression or decompression mode
   --delete_input [DELETE_INPUT], -d [DELETE_INPUT]
                         Delete input files after compression/decompression
+
+
+
+SSH_REC	ssh		172.31.145.18	22
