@@ -212,3 +212,28 @@ with DAG(
 
     # Mapping dynamique
     process_file.expand_kwargs(files_to_process)
+
+
+
+React Flow
+validate_rattrapage_payload
+2026-01-28, 14:19:14
+Operator
+_PythonDecoratedOperator
+Start
+2026-01-28, 14:19:14
+End
+2026-01-28, 14:24:59
+Duration
+00:05:44
+DAG Version
+v11
+Logs
+Rendered Templates
+XCom
+Audit Logs
+Code
+Details
+Asset Events
+Log message source details: sources=["/opt/airflow/logs/dag_id=dag_rattrapage/run_id=asset_triggered__2026-01-28T13:19:09.339181+00:00_lQOJKEvg/task_id=validate_rattrapage_payload/attempt=1.log"]
+::group::Log message source details: sources=["/opt/airflow/logs/dag_id=dag_rattrapage/run_id=asset_triggered__2026-01-28T13:19:09.339181+00:00_lQOJKEvg/task_id=validate_rattrapage_payload/attempt=1.log"]
