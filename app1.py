@@ -16,9 +16,7 @@ logger = logging.getLogger(__name__)
 asset_rattrapage = Asset("replay://rattrapage")
 
 
-# ============================================================
 # Validation + explosion du JSON porté par l’AssetEvent
-# ============================================================
 
 @task
 def validate_rattrapage_payload():
@@ -47,9 +45,7 @@ def validate_rattrapage_payload():
     payload = asset_events[-1].extra
     logger.info("Payload reçu depuis l'Asset : %s", payload)
 
-    # -------------------------
     # VALIDATION
-    # -------------------------
 
     if not isinstance(payload, dict):
         raise ValueError("Asset payload must be a JSON object")
@@ -87,9 +83,7 @@ def validate_rattrapage_payload():
         len(files),
     )
 
-    # -------------------------
-    # EXPLOSION (intégrée ici)
-    # -------------------------
+    # EXPLOSION 
 
     return [
         {
@@ -100,9 +94,7 @@ def validate_rattrapage_payload():
     ]
 
 
-# ============================================================
 # DAG déclenché UNIQUEMENT par l’Asset
-# ============================================================
 
 with DAG(
     dag_id="dag_rattrapage",
@@ -116,9 +108,7 @@ with DAG(
 
     files_to_process = validate_rattrapage_payload()
 
-    # ============================================================
     # Traitement d’un fichier (1 Spark job par fichier)
-    # ============================================================
 
     @task_group
     def process_file(contract_path: str, file_path: str):
