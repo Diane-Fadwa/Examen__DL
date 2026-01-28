@@ -7,6 +7,7 @@ from airflow import DAG
 from airflow.decorators import task, task_group
 from airflow.sdk import Asset
 from airflow.operators.python import get_current_context
+from airflow.providers.ssh.hooks.ssh import SSHHook
 
 from awb_lib.providers.knox.hooks.knox_livy_hook import KnoxLivyHook
 
@@ -16,22 +17,12 @@ logger = logging.getLogger(__name__)
 asset_rattrapage = Asset("replay://rattrapage")
 
 
+# ============================================================
 # Validation + explosion du JSON porté par l’AssetEvent
+# ============================================================
 
 @task
 def validate_rattrapage_payload():
-    """
-    Récupère, valide et EXPLOSE le JSON depuis AssetEvent.extra
-
-    Format attendu :
-    {
-        "contract_path": "hdfs://nameservice1/.../contract.yml",
-        "files": [
-            "hdfs://nameservice1/raw/....txt"
-        ]
-    }
-    """
-
     ctx = get_current_context()
 
     events = ctx.get("triggering_asset_events")
@@ -45,45 +36,21 @@ def validate_rattrapage_payload():
     payload = asset_events[-1].extra
     logger.info("Payload reçu depuis l'Asset : %s", payload)
 
-    # VALIDATION
-
     if not isinstance(payload, dict):
         raise ValueError("Asset payload must be a JSON object")
 
-    if "contract_path" not in payload:
-        raise ValueError("Missing 'contract_path'")
-
-    if "files" not in payload:
-        raise ValueError("Missing 'files'")
+    if "contract_path" not in payload or "files" not in payload:
+        raise ValueError("Missing required fields")
 
     contract_path = payload["contract_path"]
     files = payload["files"]
 
-    if not isinstance(contract_path, str):
-        raise ValueError("'contract_path' must be a string")
-
     if not contract_path.startswith("hdfs://"):
-        raise ValueError("'contract_path' must be an HDFS path (hdfs://...)")
-
-    if not contract_path.endswith((".yml", ".yaml")):
-        raise ValueError("'contract_path' must be a YAML file")
-
-    if not isinstance(files, list) or not files:
-        raise ValueError("'files' must be a non-empty list")
+        raise ValueError("'contract_path' must be an HDFS path")
 
     for f in files:
-        if not isinstance(f, str):
-            raise ValueError("Each file must be a string")
         if not f.startswith("hdfs://"):
-            raise ValueError(f"File must be an HDFS path (hdfs://...): {f}")
-
-    logger.info(
-        "Rattrapage validé : contract=%s | %d fichiers",
-        contract_path,
-        len(files),
-    )
-
-    # EXPLOSION 
+            raise ValueError(f"Invalid HDFS path: {f}")
 
     return [
         {
@@ -94,25 +61,61 @@ def validate_rattrapage_payload():
     ]
 
 
-# DAG déclenché UNIQUEMENT par l’Asset
+# ============================================================
+# DAG
+# ============================================================
 
 with DAG(
     dag_id="dag_rattrapage",
-    description="DAG de rattrapage déclenché par l’Asset replay://rattrapage",
+    description="DAG de rattrapage déclenché par Asset",
     start_date=datetime(2026, 1, 1),
     schedule=[asset_rattrapage],
     catchup=False,
     default_args={"owner": "airflow", "retries": 1},
-    tags=["rattrapage", "asset", "replay"],
+    tags=["rattrapage", "asset"],
 ) as dag:
 
     files_to_process = validate_rattrapage_payload()
 
-    # Traitement d’un fichier (1 Spark job par fichier)
+    # ============================================================
+    # Traitement par fichier
+    # ============================================================
 
     @task_group
     def process_file(contract_path: str, file_path: str):
 
+        # ----------------------------
+        # Décompression si nécessaire
+        # ----------------------------
+        @task
+        def decompress_if_needed(file_path: str) -> str:
+            if not file_path.endswith(".zstd"):
+                logger.info("Fichier non compressé, passage direct : %s", file_path)
+                return file_path
+
+            ssh_hook = SSHHook(ssh_conn_id="SSH_REC_RATTRAPAGE")
+
+            input_path = file_path
+            output_path = file_path.replace(".zstd", "")
+
+            cmd = f"""
+            cd /opt/workspace/Script/CEKO/hcomp/lib/bin && \
+            ./hcompressor \
+              --mode decompression \
+              --compression_type zstd \
+              --delete_input 0 \
+              {input_path} {output_path}
+            """
+
+            logger.info("Décompression du fichier via SSH : %s", input_path)
+            ssh_hook.run_command(command=cmd)
+
+            logger.info("Fichier décompressé : %s", output_path)
+            return output_path
+
+        # ----------------------------
+        # Spark job
+        # ----------------------------
         @task
         def spark_validate_ingest(contract_path: str, file_path: str):
             livy_hook = KnoxLivyHook(conn_id="KNOX_REC")
@@ -120,22 +123,16 @@ with DAG(
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             random_suffix = random.randint(1000, 9999)
 
-            job_name = (
-                f"rattrapage_{Path(file_path).stem}_{timestamp}_{random_suffix}"
-            )
+            job_name = f"rattrapage_{Path(file_path).stem}_{timestamp}_{random_suffix}"
 
             logger.info("Submitting Spark job %s", job_name)
-            logger.info("Contract: %s", contract_path)
             logger.info("Input file: %s", file_path)
 
             batch_id = livy_hook.post_batch(
                 file="hdfs://nameservice1/awb_rec/awb_ingestion/artifacts/"
                      "ebk_web_device_history/check_meta_from_contract.py",
                 name=job_name,
-                args=[
-                    contract_path,
-                    file_path,
-                ],
+                args=[contract_path, file_path],
                 queue="default",
                 conf={
                     "spark.sql.sources.partitionOverwriteMode": "dynamic",
@@ -155,19 +152,9 @@ with DAG(
                 max_polling_attempts=120,
             )
 
-            logger.info(
-                "Spark job %s terminé avec l’état %s",
-                batch_id,
-                final_state.value,
-            )
+            logger.info("Spark job terminé avec l’état %s", final_state.value)
 
-            return {
-                "batch_id": batch_id,
-                "file": file_path,
-                "state": final_state.value,
-            }
+        decompressed_file = decompress_if_needed(file_path)
+        spark_validate_ingest(contract_path, decompressed_file)
 
-        spark_validate_ingest(contract_path, file_path)
-
-    # Mapping dynamique
     process_file.expand_kwargs(files_to_process)
