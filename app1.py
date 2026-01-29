@@ -1,261 +1,196 @@
-[cdprct@cdp-gateway-01-rct hcompressor]$ cat hdfs_utils.py
-from sys import stderr
+import logging
+import random
+from datetime import datetime
+from pathlib import Path
 
-from hcompressor.utils import clean_path
+from airflow import DAG
+from airflow.decorators import task, task_group
+from airflow.sdk import Asset, get_current_context
+from airflow.providers.ssh.hooks.ssh import SSHHook
 
+from awb_lib.providers.knox.hooks.knox_livy_hook import KnoxLivyHook
 
-class HdfsUtils:
-    """Hdfs utils class"""
+logger = logging.getLogger(__name__)
 
-    @staticmethod
-    def get_recursive_hdfs_files_list(input_path: str):
-        """Get recursive hdfs files list
+# Asset consommé
+asset_rattrapage = Asset("replay://rattrapage")
 
-        Args:
-            input_path (str): Input path
+# Validation + explosion du JSON porté par l’AssetEvent
+@task
+def validate_rattrapage_payload():
+    ctx = get_current_context()
+    events = ctx.get("triggering_asset_events")
+    if not events:
+        raise ValueError("No triggering asset events found")
 
-        Returns:
-            list: List of files
+    asset_events = events.get(asset_rattrapage)
+    if not asset_events:
+        raise ValueError("No events found for asset replay://rattrapage")
 
-        Raises:
-            InvalidHdfsPathException: Invalid hdfs path exception
+    payload = asset_events[-1].extra
+    logger.info("Payload reçu depuis l'Asset : %s", payload)
 
-        Examples:
-            >>> get_recursive_hdfs_files_list("/path/to/folder")
-            ["/path/to/folder/file1.csv", "/path/to/folder/file2.csv", "/path/to/folder/subfolder/file3.csv"]
-        """
+    if not isinstance(payload, dict):
+        raise ValueError("Asset payload must be a JSON object")
 
-        HdfsUtils.validate_hdfs_path(input_path)
-        files_list = []
+    if "contract_path" not in payload:
+        raise ValueError("Missing 'contract_path'")
 
-        exit_code, stdo, stde = HdfsUtils.exec_command(f"hdfs dfs -ls -R {input_path}")
-        stdo = stdo.decode("utf-8")
-        if exit_code != 0:
-            raise InvalidHdfsPathException(f"{input_path} is not a valid hdfs path ")
+    if "files" not in payload:
+        raise ValueError("Missing 'files'")
 
-        for line in stdo.splitlines():
-            if line.startswith("-"):
-                files_list.append(line.split(" ")[-1])
+    contract_path = payload["contract_path"]
+    files = payload["files"]
 
-        return files_list
+    if not isinstance(contract_path, str) or not contract_path.startswith("hdfs://"):
+        raise ValueError("'contract_path' must be an HDFS path")
 
-    @staticmethod
-    def validate_hdfs_path(input_path: str):
-        """Validate hdfs path
+    if not isinstance(files, list) or not files:
+        raise ValueError("'files' must be a non-empty list")
 
-        Args:
-            input_path (str): Input path
+    for f in files:
+        if not isinstance(f, str) or not f.startswith("hdfs://"):
+            raise ValueError(f"Invalid HDFS file path: {f}")
 
-        Raises:
-            InvalidHdfsPathException: Invalid hdfs path exception
+    logger.info(
+        "Rattrapage validé : contract=%s | %d fichiers",
+        contract_path,
+        len(files),
+    )
 
-        Examples:
-            >>> validate_hdfs_path("/path/to/folder")
-            True
-            >>> validate_hdfs_path("/path/to/folder/")
-            False
-            >>> validate_hdfs_path("/path/to/folder/file.csv")
-            False
-        """
-
-        if not HdfsUtils.exists(input_path):
-            raise InvalidHdfsPathException(f"{input_path} is not a valid hdfs path ")
-
-    @staticmethod
-    def ensure_hdfs_file_parent_folder_exists(file_path: str):
-        """Ensure hdfs file parent folder exists
-
-        Args:
-            file_path (str): File path
-
-        Examples:
-            >>> ensure_hdfs_file_parent_folder_exists("/path/to/folder/file.csv")
-        """
-
-        parent_folder = clean_path(file_path, prefix=False, suffix=True).rsplit("/", 1)[
-            0
-        ]
-        HdfsUtils.ensure_hdfs_directory_exists(parent_folder)
-
-    @classmethod
-    def ensure_hdfs_directory_exists(cls, path: str):
-        """Ensure hdfs directory exists
-
-        if the directory does not exist, it will be created
-
-        Args:
-            path (str): Path
-
-        Examples:
-            >>> ensure_hdfs_directory_exists("/path/to/folder")
-
-        """
-
-        if not HdfsUtils.exists(path):
-            HdfsUtils.mkdir(path, verbose=True)
-
-    @classmethod
-    def check_is_directory(cls, path: str):
-        """Check if path is a directory
-
-        Args:
-            path (str): Path
-
-        Returns:
-            bool: True if path is a directory, False otherwise
-
-        Examples:
-            >>> check_is_directory("/path/to/folder")
-            True
-            >>> check_is_directory("/path/to/folder/file.csv")
-            False
-        """
-        return HdfsUtils.test(path, test="d")
-
-    @classmethod
-    def get_non_recursive_hdfs_files_list(cls, input_path: str):
-        """Get non recursive hdfs files list
-
-        Args:
-            input_path (str): Input path
-
-        Returns:
-            list: List of files
-
-        Raises:
-            InvalidHdfsPathException: Invalid hdfs path exception
-
-        Examples:
-            >>> get_non_recursive_hdfs_files_list("/path/to/folder")
-            ["/path/to/folder/file1.csv", "/path/to/folder/file2.csv"]
-        """
-
-        HdfsUtils.validate_hdfs_path(input_path)
-        files_list = []
-
-        exit_code, stdo, stde = HdfsUtils.exec_command(f"hdfs dfs -ls {input_path}")
-        stdo = stdo.decode("utf-8")
-
-        if exit_code != 0:
-            raise InvalidHdfsPathException(f"{input_path} is not a valid hdfs path ")
-
-        for line in stdo.splitlines():
-            if line.startswith("-"):
-                files_list.append(line.split(" ")[-1])
-
-        return files_list
-
-    @classmethod
-    def ls(cls, hdfs_url="", recurse=False, full=False):
-        """
-        List the hdfs URL.  If the URL is a directory, the contents are returned.
-        full=True ensures hdfs:// is prepended
-        """
-
-        if recurse:
-            cmd = "lsr"
-        else:
-            cmd = "ls"
-
-        command = "hadoop fs -%s %s" % (cmd, hdfs_url)
-
-        exit_code, stdo, stde = HdfsUtils.exec_command(command)
-        if exit_code != 0:
-            raise ValueError("command failed with code %s: %s" % (exit_code, command))
-
-        flist = []
-        lines = stdo.split(b"\n")
-        for line in lines:
-            ls = line.split()
-            if len(ls) == 8:
-                # this is a file description line
-                fname = ls[-1]
-                if full:
-                    fname = "hdfs://" + fname.decode("utf-8")
-                flist.append(fname)
-
-        return flist
-
-    @classmethod
-    def mkdir(cls, hdfs_url, verbose=False):
-        """
-        Equivalent of mkdir -p in unix
-        """
-        if verbose:
-            print("mkdir", hdfs_url, file=stderr)
-
-        command = "hadoop fs -mkdir -p " + hdfs_url
-        exit_code, stdo, stde = HdfsUtils.exec_command(command)
-        if exit_code != 0:
-            raise RuntimeError("hdfs %s" % stde)
-
-    @classmethod
-    def test(cls, hdfs_url, test="e"):
-        """
-        Test the url.
-        parameters
-        ----------
-        hdfs_url: string
-            The hdfs url
-        test: string, optional
-            'e': existence
-            'd': is a directory
-            'z': zero length
-            Default is an existence test, 'e'
-        """
-        command = """hadoop fs -test -%s %s""" % (test, hdfs_url)
-
-        exit_code, stdo, stde = HdfsUtils.exec_command(command)
-
-        if exit_code != 0:
-            return False
-        else:
-            return True
-
-    @classmethod
-    def rm(cls, hdfs_url, recurse=False, verbose=False):
-        """
-        Remove the specified hdfs url
-        """
-        mess = "removing " + hdfs_url
-
-        if recurse:
-            cmd = "rmr"
-            mess += " recursively"
-        else:
-            cmd = "rm"
-
-        if verbose:
-            print(mess, file=stderr)
-
-        command = "hadoop fs -%s %s" % (cmd, hdfs_url)
-        exit_code, stdo, stde = HdfsUtils.exec_command(command)
-        if exit_code != 0:
-            raise RuntimeError("hdfs %s" % stde)
-
-    @classmethod
-    def exec_command(cls, command):
-        """
-        Execute the command and return the exit status.
-        """
-        import subprocess
-        from subprocess import PIPE
-
-        pobj = subprocess.Popen(command, stdout=PIPE, stderr=PIPE, shell=True)
-
-        stdo, stde = pobj.communicate()
-        exit_code = pobj.returncode
-
-        return exit_code, stdo, stde
-
-    @classmethod
-    def exists(cls, hdfs_url):
-        """
-        Test if the url exists.
-        """
-        return HdfsUtils.test(hdfs_url, test="e")
+    # Explosion : 1 fichier = 1 exécution
+    return [
+        {
+            "contract_path": contract_path,
+            "file_path": f,
+        }
+        for f in files
+    ]
 
 
-class InvalidHdfsPathException(Exception):
-    pass
-[cdprct@cdp-gateway-01-rct hcompressor]$
+# DAG déclenché UNIQUEMENT par l’Asset
+with DAG(
+    dag_id="dag_rattrapage",
+    description="DAG de rattrapage déclenché par l’Asset replay://rattrapage",
+    start_date=datetime(2026, 1, 1),
+    schedule=[asset_rattrapage],
+    catchup=False,
+    default_args={"owner": "airflow", "retries": 1},
+    tags=["rattrapage", "asset", "replay"],
+) as dag:
+
+    files_to_process = validate_rattrapage_payload()
+
+    # Traitement par fichier
+    @task_group
+    def process_file(contract_path: str, file_path: str):
+
+        # Décompression si nécessaire (.zstd uniquement)
+        @task
+        def decompress_if_needed(file_path: str) -> str:
+            if not file_path.endswith(".zstd"):
+                logger.info("Fichier non compressé : %s", file_path)
+                return file_path
+
+            ssh_hook = SSHHook(ssh_conn_id="SSH_REC")
+            ssh_client = ssh_hook.get_conn()
+
+            # CHEMIN pour hcompressor → enlever hdfs://nameservice1 ou triple slash
+            if file_path.startswith("hdfs://nameservice1"):
+                machine_input_path = file_path.replace("hdfs://nameservice1", "", 1)
+            elif file_path.startswith("hdfs:///"):
+                machine_input_path = file_path.replace("hdfs://", "", 1)
+            else:
+                machine_input_path = file_path
+
+            machine_output_path = machine_input_path.removesuffix(".zstd")
+
+            cmd = f"""
+            cd /opt/workspace/Script/CEKO/hcomp/lib/bin && \
+            ./hcompressor \
+              --mode decompression \
+              --compression_type zstd \
+              --delete_input 0 \
+              {machine_input_path} {machine_output_path}
+            """
+
+            logger.info("Décompression via hcompressor : %s", file_path)
+
+            exit_code, stdout, stderr = ssh_hook.exec_ssh_client_command(
+                ssh_client=ssh_client,
+                command=cmd,
+                get_pty=True,
+                environment=None,
+            )
+
+            if exit_code != 0:
+                raise RuntimeError(
+                    f"Erreur hcompressor (exit={exit_code})\n"
+                    f"stdout={stdout.decode()}\n"
+                    f"stderr={stderr.decode()}"
+                )
+
+            # Reconstruction du path HDFS pour Spark
+            hdfs_output_path = "hdfs://nameservice1" + machine_output_path
+            logger.info("Fichier décompressé prêt pour Spark : %s", hdfs_output_path)
+            return hdfs_output_path
+
+        # Spark validation + ingestion
+        @task
+        def spark_validate_ingest(contract_path: str, file_path: str):
+            livy_hook = KnoxLivyHook(conn_id="KNOX_REC")
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            random_suffix = random.randint(1000, 9999)
+
+            job_name = f"rattrapage_{Path(file_path).stem}_{timestamp}_{random_suffix}"
+
+            logger.info("Submitting Spark job %s", job_name)
+            logger.info("Contract: %s", contract_path)
+            logger.info("Input file: %s", file_path)
+
+            batch_id = livy_hook.post_batch(
+                file="hdfs://nameservice1/awb_rec/awb_ingestion/artifacts/"
+                     "ebk_web_device_history/check_meta_from_contract.py",
+                name=job_name,
+                args=[
+                    contract_path,
+                    file_path,
+                ],
+                queue="default",
+                conf={
+                    "spark.sql.sources.partitionOverwriteMode": "dynamic",
+                    "spark.sql.adaptive.enabled": "true",
+                    "spark.dynamicAllocation.enabled": "true",
+                },
+                driver_memory="1g",
+                driver_cores=1,
+                executor_memory="2g",
+                executor_cores=2,
+                num_executors=2,
+            )
+
+            final_state = livy_hook.poll_for_completion(
+                session_id=batch_id,
+                polling_interval=30,
+                max_polling_attempts=120,
+            )
+
+            logger.info(
+                "Spark job %s terminé avec l’état %s",
+                batch_id,
+                final_state.value,
+            )
+
+            return {
+                "batch_id": batch_id,
+                "file": file_path,
+                "state": final_state.value,
+            }
+
+        # Chaînage logique
+        decompressed_file = decompress_if_needed(file_path)
+        spark_validate_ingest(contract_path, decompressed_file)
+
+    # Mapping dynamique
+    process_file.expand_kwargs(files_to_process)
