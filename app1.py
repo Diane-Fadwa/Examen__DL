@@ -1,37 +1,6 @@
- ./hcompressor --help
-
-usage: hcompressor [-h] [--skip_extension SKIP_EXTENSION]
-                   [--only_extension ONLY_EXTENSION] [--trust {0,1,2}]
-                   [--logs_file LOGS_FILE] [--silent [SILENT]]
-                   [--compression_type {bz2,zstd,gz}] [-r [RECURSIVE]]
-                   [--mode {compression,decompression}]
-                   [--delete_input [DELETE_INPUT]]
-                   input_path output_path
-
-Hcompress: Hdfs files compressor built in python
-
-positional arguments:
-  input_path            Input path
-  output_path           Output path
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --skip_extension SKIP_EXTENSION, -s SKIP_EXTENSION
-                        Skip files with this extension ex: .txt,.csv
-  --only_extension ONLY_EXTENSION, -o ONLY_EXTENSION
-                        Only process files with this extension ex: .txt,.csv
-  --trust {0,1,2}, -t {0,1,2}
-                        Trust level: 0 - validate input and output paths, 1 -
-                        validate output path, 2 - no validation
-  --logs_file LOGS_FILE
-                        Path to logs file
-  --silent [SILENT]     Silent mode: True - no logs will be printed, False -
-                        logs will be printed
-  --compression_type {bz2,zstd,gz}, -c {bz2,zstd,gz}
-                        Compression type
-  -r [RECURSIVE], --recursive [RECURSIVE]
-                        Recursively compress/decompress files
-  --mode {compression,decompression}
-                        Compression or decompression mode
-  --delete_input [DELETE_INPUT], -d [DELETE_INPUT]
-                        Delete input files after compression/decompression
+./hcompressor \
+  --mode decompression \
+  --compression_type zstd \
+  --delete_input 0 \
+  /raw/ebk_web_device_history/16-Jan-2026/ebk_web_device_history_20250502.txt.zstd \
+  /raw/ebk_web_device_history/16-Jan-2026/ebk_web_device_history_20250502.txt
