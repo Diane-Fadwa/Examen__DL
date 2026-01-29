@@ -52,3 +52,11 @@ File "/opt/airflow/dags/repo/rattrapage/dag_rattrapage.py", line 128 in decompre
 [cdprct@cdp-gateway-01-rct lib]$ cd .
 [cdprct@cdp-gateway-01-rct lib]$ cd /opt/workspace/Script/CEKO/hcomp/lib/hcompressor/hdfs_utils.py
 -bash: cd: /opt/workspace/Script/CEKO/hcomp/lib/hcompressor/hdfs_utils.py: Not a directory
+
+
+[cdprct@cdp-gateway-01-rct bin]$ ll
+total 24
+-rwxr-xrwx 1 cdprct cdprct 4980 Oct 12  2022 compression_script.py
+-rwxr-xrwx 1 cdprct cdprct  675 Nov 16  2022 hcompressor
+-rwxr-xrwx 1 cdprct cdprct 4389 Oct 12  2022 test_compression_script.py
+-rwxr-xrwx 1 cdprct cdprct 3376 Oct 12  2022 test_integration_raw_compression_script.py
