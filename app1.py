@@ -43,3 +43,12 @@ File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/standa
 File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/callback_runner.py", line 81 in run
 
 File "/opt/airflow/dags/repo/rattrapage/dag_rattrapage.py", line 128 in decompress_if_needed
+
+
+
+[cdprct@cdp-gateway-01-rct bin]$ cd /opt/workspace/Script/CEKO/hcomp/lib/hcompressor/hdfs_utils.py
+-bash: cd: /opt/workspace/Script/CEKO/hcomp/lib/hcompressor/hdfs_utils.py: Not a directory
+[cdprct@cdp-gateway-01-rct bin]$ cd ..
+[cdprct@cdp-gateway-01-rct lib]$ cd .
+[cdprct@cdp-gateway-01-rct lib]$ cd /opt/workspace/Script/CEKO/hcomp/lib/hcompressor/hdfs_utils.py
+-bash: cd: /opt/workspace/Script/CEKO/hcomp/lib/hcompressor/hdfs_utils.py: Not a directory
