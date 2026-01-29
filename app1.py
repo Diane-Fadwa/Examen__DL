@@ -1,62 +1,261 @@
-[2026-01-29, 09:54:00] INFO - DAG bundles loaded: dags-folder: source="airflow.dag_processing.bundles.manager.DagBundlesManager"
-[2026-01-29, 09:54:00] INFO - Filling up the DagBag from /opt/airflow/dags/repo/rattrapage/dag_rattrapage.py: source="airflow.models.dagbag.DagBag"
-[2026-01-29, 09:54:01] WARNING - /home/airflow/.local/lib/python3.12/site-packages/airflow/models/connection.py:471: DeprecationWarning: Using Connection.get_connection_from_secrets from `airflow.models` is deprecated.Please use `get` on Connection from sdk(`airflow.sdk.Connection`) instead
-  warnings.warn(
-: source="py.warnings"
-[2026-01-29, 09:54:01] INFO - Connection Retrieved 'SSH_REC': source="airflow.hooks.base"
-[2026-01-29, 09:54:01] WARNING - No Host Key Verification. This won't protect against Man-In-The-Middle attacks: source="airflow.task.hooks.airflow.providers.ssh.hooks.ssh.SSHHook"
-[2026-01-29, 09:54:01] INFO - Connected (version 2.0, client OpenSSH_8.7): source="paramiko.transport"
-[2026-01-29, 09:54:01] INFO - Auth banner: b'---------------------------!! ATTENTION !!-----------------------------------\n\nAttention : vous etes maintenant connectes a un systeme informatique securise\n\nde ATTIJARIWAFA BANK. Toutes les actions menees sur ce systeme sont monitorees.\n\n-----------------------------------------------------------------------------\n': source="paramiko.transport"
-[2026-01-29, 09:54:01] INFO - Authentication (password) successful!: source="paramiko.transport"
-[2026-01-29, 09:54:01] INFO - Décompression via hcompressor : hdfs:///raw/ebk_web_device_history/16-Jan-2026/ebk_web_device_history_20250502.zstd: source="unusual_prefix_eb329238963d72514d1fc4fc57b48c5803517fb6_dag_rattrapage"
-[2026-01-29, 09:54:01] INFO - Running command: 
-            cd /opt/workspace/Script/CEKO/hcomp/lib/bin &&             ./hcompressor               --mode decompression               --compression_type zstd               --delete_input 0               hdfs:///raw/ebk_web_device_history/16-Jan-2026/ebk_web_device_history_20250502.zstd hdfs:///raw/ebk_web_device_history/16-Jan-2026/ebk_web_device_history_20250502
-            : source="airflow.task.hooks.airflow.providers.ssh.hooks.ssh.SSHHook"
-[2026-01-29, 09:54:01] INFO - : source="airflow.task.hooks.airflow.providers.ssh.hooks.ssh.SSHHook"
-[2026-01-29, 09:54:01] INFO - 3785434 | 2026-01-29 09:54:01,395 | hcompressor | INFO | Arguments parsed successfully: source="airflow.task.hooks.airflow.providers.ssh.hooks.ssh.SSHHook"
-[2026-01-29, 09:54:05] INFO - Traceback (most recent call last):: source="airflow.task.hooks.airflow.providers.ssh.hooks.ssh.SSHHook"
-[2026-01-29, 09:54:05] INFO -   File "./hcompressor", line 22, in <module>: source="airflow.task.hooks.airflow.providers.ssh.hooks.ssh.SSHHook"
-[2026-01-29, 09:54:05] INFO -     hcompressor.hcompressor.main(): source="airflow.task.hooks.airflow.providers.ssh.hooks.ssh.SSHHook"
-[2026-01-29, 09:54:05] INFO -   File "/opt/workspace/Script/CEKO/hcomp/lib/hcompressor/hcompressor.py", line 72, in main: source="airflow.task.hooks.airflow.providers.ssh.hooks.ssh.SSHHook"
-[2026-01-29, 09:54:05] INFO -     dfs.validate_hdfs_path(input_path): source="airflow.task.hooks.airflow.providers.ssh.hooks.ssh.SSHHook"
-[2026-01-29, 09:54:05] INFO -   File "/opt/workspace/Script/CEKO/hcomp/lib/hcompressor/hdfs_utils.py", line 61, in validate_hdfs_path: source="airflow.task.hooks.airflow.providers.ssh.hooks.ssh.SSHHook"
-[2026-01-29, 09:54:05] INFO -     raise InvalidHdfsPathException(f"{input_path} is not a valid hdfs path "): source="airflow.task.hooks.airflow.providers.ssh.hooks.ssh.SSHHook"
-[2026-01-29, 09:54:05] INFO - hcompressor.hdfs_utils.InvalidHdfsPathException: hdfs:///raw/ebk_web_device_history/16-Jan-2026/ebk_web_device_history_20250502.zstd is not a valid hdfs path : source="airflow.task.hooks.airflow.providers.ssh.hooks.ssh.SSHHook"
-[2026-01-29, 09:54:05] ERROR - Task failed with exception: source="task"
-RuntimeError: Erreur hcompressor (exit=1)
-stdout=b'\r\n3785434 | 2026-01-29 09:54:01,395 | hcompressor | INFO | Arguments parsed successfully\r\nTraceback (most recent call last):\r\n  File "./hcompressor", line 22, in <module>\r\n    hcompressor.hcompressor.main()\r\n  File "/opt/workspace/Script/CEKO/hcomp/lib/hcompressor/hcompressor.py", line 72, in main\r\n    dfs.validate_hdfs_path(input_path)\r\n  File "/opt/workspace/Script/CEKO/hcomp/lib/hcompressor/hdfs_utils.py", line 61, in validate_hdfs_path\r\n    raise InvalidHdfsPathException(f"{input_path} is not a valid hdfs path ")\r\nhcompressor.hdfs_utils.InvalidHdfsPathException: hdfs:///raw/ebk_web_device_history/16-Jan-2026/ebk_web_device_history_20250502.zstd is not a valid hdfs path \r\n'
-stderr=b''
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py", line 920 in run
+[cdprct@cdp-gateway-01-rct hcompressor]$ cat hdfs_utils.py
+from sys import stderr
 
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py", line 1215 in _execute_task
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/operator.py", line 397 in wrapper
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/decorator.py", line 251 in execute
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/operator.py", line 397 in wrapper
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/standard/operators/python.py", line 216 in execute
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/standard/operators/python.py", line 239 in execute_callable
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/callback_runner.py", line 81 in run
-
-File "/opt/airflow/dags/repo/rattrapage/dag_rattrapage.py", line 128 in decompress_if_needed
+from hcompressor.utils import clean_path
 
 
+class HdfsUtils:
+    """Hdfs utils class"""
 
-[cdprct@cdp-gateway-01-rct bin]$ cd /opt/workspace/Script/CEKO/hcomp/lib/hcompressor/hdfs_utils.py
--bash: cd: /opt/workspace/Script/CEKO/hcomp/lib/hcompressor/hdfs_utils.py: Not a directory
-[cdprct@cdp-gateway-01-rct bin]$ cd ..
-[cdprct@cdp-gateway-01-rct lib]$ cd .
-[cdprct@cdp-gateway-01-rct lib]$ cd /opt/workspace/Script/CEKO/hcomp/lib/hcompressor/hdfs_utils.py
--bash: cd: /opt/workspace/Script/CEKO/hcomp/lib/hcompressor/hdfs_utils.py: Not a directory
+    @staticmethod
+    def get_recursive_hdfs_files_list(input_path: str):
+        """Get recursive hdfs files list
+
+        Args:
+            input_path (str): Input path
+
+        Returns:
+            list: List of files
+
+        Raises:
+            InvalidHdfsPathException: Invalid hdfs path exception
+
+        Examples:
+            >>> get_recursive_hdfs_files_list("/path/to/folder")
+            ["/path/to/folder/file1.csv", "/path/to/folder/file2.csv", "/path/to/folder/subfolder/file3.csv"]
+        """
+
+        HdfsUtils.validate_hdfs_path(input_path)
+        files_list = []
+
+        exit_code, stdo, stde = HdfsUtils.exec_command(f"hdfs dfs -ls -R {input_path}")
+        stdo = stdo.decode("utf-8")
+        if exit_code != 0:
+            raise InvalidHdfsPathException(f"{input_path} is not a valid hdfs path ")
+
+        for line in stdo.splitlines():
+            if line.startswith("-"):
+                files_list.append(line.split(" ")[-1])
+
+        return files_list
+
+    @staticmethod
+    def validate_hdfs_path(input_path: str):
+        """Validate hdfs path
+
+        Args:
+            input_path (str): Input path
+
+        Raises:
+            InvalidHdfsPathException: Invalid hdfs path exception
+
+        Examples:
+            >>> validate_hdfs_path("/path/to/folder")
+            True
+            >>> validate_hdfs_path("/path/to/folder/")
+            False
+            >>> validate_hdfs_path("/path/to/folder/file.csv")
+            False
+        """
+
+        if not HdfsUtils.exists(input_path):
+            raise InvalidHdfsPathException(f"{input_path} is not a valid hdfs path ")
+
+    @staticmethod
+    def ensure_hdfs_file_parent_folder_exists(file_path: str):
+        """Ensure hdfs file parent folder exists
+
+        Args:
+            file_path (str): File path
+
+        Examples:
+            >>> ensure_hdfs_file_parent_folder_exists("/path/to/folder/file.csv")
+        """
+
+        parent_folder = clean_path(file_path, prefix=False, suffix=True).rsplit("/", 1)[
+            0
+        ]
+        HdfsUtils.ensure_hdfs_directory_exists(parent_folder)
+
+    @classmethod
+    def ensure_hdfs_directory_exists(cls, path: str):
+        """Ensure hdfs directory exists
+
+        if the directory does not exist, it will be created
+
+        Args:
+            path (str): Path
+
+        Examples:
+            >>> ensure_hdfs_directory_exists("/path/to/folder")
+
+        """
+
+        if not HdfsUtils.exists(path):
+            HdfsUtils.mkdir(path, verbose=True)
+
+    @classmethod
+    def check_is_directory(cls, path: str):
+        """Check if path is a directory
+
+        Args:
+            path (str): Path
+
+        Returns:
+            bool: True if path is a directory, False otherwise
+
+        Examples:
+            >>> check_is_directory("/path/to/folder")
+            True
+            >>> check_is_directory("/path/to/folder/file.csv")
+            False
+        """
+        return HdfsUtils.test(path, test="d")
+
+    @classmethod
+    def get_non_recursive_hdfs_files_list(cls, input_path: str):
+        """Get non recursive hdfs files list
+
+        Args:
+            input_path (str): Input path
+
+        Returns:
+            list: List of files
+
+        Raises:
+            InvalidHdfsPathException: Invalid hdfs path exception
+
+        Examples:
+            >>> get_non_recursive_hdfs_files_list("/path/to/folder")
+            ["/path/to/folder/file1.csv", "/path/to/folder/file2.csv"]
+        """
+
+        HdfsUtils.validate_hdfs_path(input_path)
+        files_list = []
+
+        exit_code, stdo, stde = HdfsUtils.exec_command(f"hdfs dfs -ls {input_path}")
+        stdo = stdo.decode("utf-8")
+
+        if exit_code != 0:
+            raise InvalidHdfsPathException(f"{input_path} is not a valid hdfs path ")
+
+        for line in stdo.splitlines():
+            if line.startswith("-"):
+                files_list.append(line.split(" ")[-1])
+
+        return files_list
+
+    @classmethod
+    def ls(cls, hdfs_url="", recurse=False, full=False):
+        """
+        List the hdfs URL.  If the URL is a directory, the contents are returned.
+        full=True ensures hdfs:// is prepended
+        """
+
+        if recurse:
+            cmd = "lsr"
+        else:
+            cmd = "ls"
+
+        command = "hadoop fs -%s %s" % (cmd, hdfs_url)
+
+        exit_code, stdo, stde = HdfsUtils.exec_command(command)
+        if exit_code != 0:
+            raise ValueError("command failed with code %s: %s" % (exit_code, command))
+
+        flist = []
+        lines = stdo.split(b"\n")
+        for line in lines:
+            ls = line.split()
+            if len(ls) == 8:
+                # this is a file description line
+                fname = ls[-1]
+                if full:
+                    fname = "hdfs://" + fname.decode("utf-8")
+                flist.append(fname)
+
+        return flist
+
+    @classmethod
+    def mkdir(cls, hdfs_url, verbose=False):
+        """
+        Equivalent of mkdir -p in unix
+        """
+        if verbose:
+            print("mkdir", hdfs_url, file=stderr)
+
+        command = "hadoop fs -mkdir -p " + hdfs_url
+        exit_code, stdo, stde = HdfsUtils.exec_command(command)
+        if exit_code != 0:
+            raise RuntimeError("hdfs %s" % stde)
+
+    @classmethod
+    def test(cls, hdfs_url, test="e"):
+        """
+        Test the url.
+        parameters
+        ----------
+        hdfs_url: string
+            The hdfs url
+        test: string, optional
+            'e': existence
+            'd': is a directory
+            'z': zero length
+            Default is an existence test, 'e'
+        """
+        command = """hadoop fs -test -%s %s""" % (test, hdfs_url)
+
+        exit_code, stdo, stde = HdfsUtils.exec_command(command)
+
+        if exit_code != 0:
+            return False
+        else:
+            return True
+
+    @classmethod
+    def rm(cls, hdfs_url, recurse=False, verbose=False):
+        """
+        Remove the specified hdfs url
+        """
+        mess = "removing " + hdfs_url
+
+        if recurse:
+            cmd = "rmr"
+            mess += " recursively"
+        else:
+            cmd = "rm"
+
+        if verbose:
+            print(mess, file=stderr)
+
+        command = "hadoop fs -%s %s" % (cmd, hdfs_url)
+        exit_code, stdo, stde = HdfsUtils.exec_command(command)
+        if exit_code != 0:
+            raise RuntimeError("hdfs %s" % stde)
+
+    @classmethod
+    def exec_command(cls, command):
+        """
+        Execute the command and return the exit status.
+        """
+        import subprocess
+        from subprocess import PIPE
+
+        pobj = subprocess.Popen(command, stdout=PIPE, stderr=PIPE, shell=True)
+
+        stdo, stde = pobj.communicate()
+        exit_code = pobj.returncode
+
+        return exit_code, stdo, stde
+
+    @classmethod
+    def exists(cls, hdfs_url):
+        """
+        Test if the url exists.
+        """
+        return HdfsUtils.test(hdfs_url, test="e")
 
 
-[cdprct@cdp-gateway-01-rct bin]$ ll
-total 24
--rwxr-xrwx 1 cdprct cdprct 4980 Oct 12  2022 compression_script.py
--rwxr-xrwx 1 cdprct cdprct  675 Nov 16  2022 hcompressor
--rwxr-xrwx 1 cdprct cdprct 4389 Oct 12  2022 test_compression_script.py
--rwxr-xrwx 1 cdprct cdprct 3376 Oct 12  2022 test_integration_raw_compression_script.py
+class InvalidHdfsPathException(Exception):
+    pass
+[cdprct@cdp-gateway-01-rct hcompressor]$
