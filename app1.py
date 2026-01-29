@@ -172,3 +172,9 @@ with DAG(
         spark_validate_ingest(contract_path, decompressed_file)
 
     process_file.expand_kwargs(files_to_process)
+
+
+
+⚠️ ACTION REQUISE : Nettoyez vos branches Git inactives ! Veuillez supprimer les branches fusionnées/inactives de plus de 30 jours pour éviter les échecs de build. Vérifiez vos dépôts : https://jenkins.udd.attijariwafa.net
+
+Questions ? Contactez l'équipe INDUS.
