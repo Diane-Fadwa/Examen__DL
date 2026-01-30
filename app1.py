@@ -137,13 +137,33 @@ with DAG(
                     f"stderr={stderr.decode()}"
                 )
 
-            # Nom réel du fichier produit
-            output_file_name = Path(local_input_path).stem
-            hdfs_output_file = (
-                "hdfs://nameservice1"
-                + local_output_dir
-                + f"/{output_file_name}"
+            # ✅ CORRECTION : récupérer le vrai fichier .txt généré
+            list_cmd = f"hdfs dfs -ls {local_output_dir} | awk '{{print $8}}'"
+
+            exit_code, stdout, stderr = ssh_hook.exec_ssh_client_command(
+                ssh_client=ssh_client,
+                command=list_cmd,
+                get_pty=True,
+                timeout=120,
             )
+
+            if exit_code != 0:
+                raise RuntimeError(
+                    f"Impossible de lister le dossier {local_output_dir}"
+                )
+
+            txt_files = [
+                f for f in stdout.decode().splitlines()
+                if f.strip().endswith(".txt")
+            ]
+
+            if len(txt_files) != 1:
+                raise ValueError(
+                    f"Attendu exactement 1 fichier .txt dans {local_output_dir}, "
+                    f"trouvé {len(txt_files)} : {txt_files}"
+                )
+
+            hdfs_output_file = "hdfs://nameservice1" + txt_files[0]
 
             logger.info(
                 "Fichier décompressé prêt pour Spark : %s",
@@ -158,7 +178,9 @@ with DAG(
         @task
         def spark_validate_ingest(contract_path: str, file_path: str):
             if not file_path.endswith(".txt"):
-                raise ValueError(f"Spark input invalide (pas un fichier) : {file_path}")
+                raise ValueError(
+                    f"Spark input invalide (pas un fichier) : {file_path}"
+                )
 
             livy_hook = KnoxLivyHook(conn_id="KNOX_REC")
 
@@ -228,28 +250,3 @@ with DAG(
     # Mapping dynamique
     # =========================
     process_file.expand_kwargs(files_to_process)
-
-
-
-
-[2026-01-30, 09:14:05] INFO - DAG bundles loaded: dags-folder: source="airflow.dag_processing.bundles.manager.DagBundlesManager"
-[2026-01-30, 09:14:05] INFO - Filling up the DagBag from /opt/airflow/dags/repo/rattrapage/dag_rattrapage.py: source="airflow.models.dagbag.DagBag"
-[2026-01-30, 09:14:06] ERROR - Task failed with exception: source="task"
-ValueError: Spark input invalide (pas un fichier) : hdfs://nameservice1/raw/ebk_web_device_history/16-Jan-2026/ebk_web_device_history_20250502/ebk_web_device_history_20250502
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py", line 920 in run
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py", line 1215 in _execute_task
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/operator.py", line 397 in wrapper
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/decorator.py", line 251 in execute
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/bases/operator.py", line 397 in wrapper
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/standard/operators/python.py", line 216 in execute
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/standard/operators/python.py", line 239 in execute_callable
-
-File "/home/airflow/.local/lib/python3.12/site-packages/airflow/sdk/execution_time/callback_runner.py", line 81 in run
-
-File "/opt/airflow/dags/repo/rattrapage/dag_rattrapage.py", line 161 in spark_validate_ingest
