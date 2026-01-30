@@ -250,3 +250,10 @@ with DAG(
     # Mapping dynamique
     # =========================
     process_file.expand_kwargs(files_to_process)
+
+
+
+
+[cdprct@cdp-gateway-01-rct bin]$ hdfs dfs -ls /raw/ebk_web_device_history/16-Jan-2026/ebk_web_device_history_20250502
+Found 1 items
+-rw-r--r--   1 cloudera-scm supergroup    3530244 2026-01-30 09:55 /raw/ebk_web_device_history/16-Jan-2026/ebk_web_device_history_20250502/ebk_web_device_history_20250502.txt
