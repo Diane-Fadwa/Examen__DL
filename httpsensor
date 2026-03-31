@@ -147,10 +147,13 @@ with DAG(
     wait_for_file
 
 
-Traceback (most recent call last):
-  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
-  File "/opt/airflow/dags/repo/httpsensor/httpsensor.py", line 118, in <module>
-    with DAG(
-         ^^^^
-TypeError: DAG.__init__() got an unexpected keyword argument 'schedule_interval'
-
+[
+  {
+    "name": "string",
+    "path": "string",
+    "size": 0,
+    "modified": 0,
+    "is_file": true,
+    "is_dir": true
+  }
+]
