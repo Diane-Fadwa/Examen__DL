@@ -6,20 +6,17 @@ from airflow.exceptions import AirflowSensorTimeout
 from datetime import datetime, timedelta
 import logging
 
-# ===============================
+
 # CONFIGURATION
-# ===============================
 
 DAG_ID = "file_ingestion_sensor"
 
-# Exemple : nom du fichier attendu basé sur la date
+# nom du fichier attendu basé sur la date
 def get_expected_filename(execution_date):
     return f"file_{execution_date.strftime('%Y_%m_%d')}.csv"
 
 
-# ===============================
-# 1. RESPONSE CHECK
-# ===============================
+# RESPONSE CHECK
 
 def check_file_arrival(response, **context):
     """
@@ -58,9 +55,7 @@ def check_file_arrival(response, **context):
     return expected_file in files
 
 
-# ===============================
-# 2. CALLBACK FAILURE
-# ===============================
+# CALLBACK FAILURE
 
 def handle_failure(context):
     """
@@ -92,13 +87,10 @@ def handle_failure(context):
 
     logging.error(f"[TRACEABILITY EVENT] {event}")
 
-    # 👉 plus tard :
+    # plus tard :
     # insert buffer / API / log centralisé
 
-
-# ===============================
-# 3. CALLBACK SUCCESS (OPTIONNEL)
-# ===============================
+# CALLBACK SUCCESS
 
 def handle_success(context):
     ti = context.get("task_instance")
@@ -117,9 +109,7 @@ def handle_success(context):
     logging.info(f"[FILE ARRIVED] {event}")
 
 
-# ===============================
-# 4. DAG
-# ===============================
+# DAG
 
 default_args = {
     "owner": "airflow",
@@ -145,10 +135,10 @@ with DAG(
 
         response_check=check_file_arrival,
 
-        poke_interval=120,         # toutes les 2 min (optimisé)
+        poke_interval=120,         # toutes les 2 min
         timeout=6 * 60 * 60,       # 6 heures
 
-        mode="reschedule",         # CRUCIAL pour performance
+        mode="reschedule",         # Pour la perf
 
         on_failure_callback=handle_failure,
         on_success_callback=handle_success,
