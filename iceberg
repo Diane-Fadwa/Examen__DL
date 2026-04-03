@@ -256,3 +256,8 @@ Caused by: java.lang.ClassNotFoundException: iceberg.DefaultSource
 
 spark-sql>
 
+
+spark-sql> spark-submit --version
+         > spark-submit --version
+         >
+         >
