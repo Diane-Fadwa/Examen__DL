@@ -32,3 +32,20 @@ spark.sql(
 )
  
 [cdprct@cdp-gateway-01-rct ~]$
+
+CREATE TABLE spark_catalog.awb_rec.icbrg_airflow_flux_status (
+    id_dag STRING,               
+    id_execution STRING,          
+    date_execution TIMESTAMP,     
+    date_evenement TIMESTAMP,     
+    statut_job STRING,            
+    tache_echouee STRING,        
+    duree BIGINT,                 
+    source STRING                 
+)
+USING iceberg
+PARTITIONED BY (days(date_evenement))
+TBLPROPERTIES (
+    'write.distribution-mode' = 'hash',
+    'write.format.default' = 'parquet'
+);
