@@ -1,0 +1,33 @@
+spark.sql(
+    """
+    CREATE TABLE spark_catalog.awb_rec.icbrg_client_mrg (
+        NUMERO_CLIENT int,
+        RAISON_SOCIALE_1 string,
+        RAISON_SOCIALE_2 string,
+        DATE_ENTREE_EN_RELATION string,
+        TYPE_CLIENT string,
+        TITRE_CIVILITE string,
+        GESTIONNAIRE_PORTEFEUILLE string,
+        COMMENTAIRES string,
+        NIVEAU_SERVICE string,
+        CHARGE_COMMERCIAL string,
+        ETAT_CLIENT string,
+        CODE_AGENCE string,
+        NUMERO_CLIENT_HOST int,
+        DATE_VALIDATION string,
+        `TIME` timestamp,
+        CANAL STRING,
+        CANAL_TRAITEMENT STRING,
+        CODE_AGENCE_CREATION STRING,
+        DATE_TECHNIQUE STRING
+        )
+        USING iceberg
+        PARTITIONED BY (DATE_TECHNIQUE)
+        TBLPROPERTIES (
+            'write.sort.order' = 'filler ASC NULLS FIRST, numero_client_host ASC NULLS FIRST',
+            'write.distribution-mode' = 'range',
+            'write.format.default' = 'parquet'
+        );
+    """
+)
+ 
