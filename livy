@@ -1,0 +1,392 @@
+"""Livy hook for Spark job submission via Knox Gateway."""
+
+import time
+from typing import Any
+
+from airflow.exceptions import AirflowException
+from airflow.providers.apache.livy.hooks.livy import BatchState, LivyHook
+
+from awb_lib.providers.knox.hooks.knox_http_hook import KnoxHttpHook
+
+
+class KnoxLivyHook(LivyHook):
+    """Custom Livy Hook that routes requests through Knox Gateway."""
+
+    def __init__(self, conn_id: str = "knox_default", *args: Any, **kwargs: Any) -> None:
+        """
+        Initialize the Knox Livy hook.
+
+        Args:
+            conn_id: Knox connection ID.
+            *args: Additional positional arguments.
+            **kwargs: Additional keyword arguments.
+
+        """
+        super().__init__(livy_conn_id=conn_id, *args, **kwargs)
+        self.knox_conn_id = conn_id
+        self.service = "livy_for_spark3"
+
+    def run_method(
+        self, endpoint: str, method: str = "GET", data: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """
+        Route API calls through Knox using KnoxHttpHook.
+
+        Args:
+            endpoint: Livy API endpoint (e.g., '/batches', '/batches/1').
+            method: HTTP method.
+            data: Request payload.
+
+        Returns:
+            Response JSON as dictionary.
+
+        Raises:
+            AirflowException: If the request fails.
+
+        """
+        knox_hook = KnoxHttpHook(service=self.service, conn_id=self.knox_conn_id, method=method, timeout=180)
+
+        try:
+            response = knox_hook.run(
+                endpoint=endpoint,
+                json_data=data,
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
+            )
+
+            self.log.info("Knox Livy Response [%s]: %s", response.status_code, response.text[:500])
+
+            if response.status_code >= 400:
+                self.log.error("Livy Error Response: %s", response.text)
+                raise AirflowException(
+                    f"Livy request failed with status {response.status_code}: {response.text}"
+                )
+
+            return response.json()
+
+        except Exception as e:
+            self.log.error("Knox Livy API call failed: %s", e)
+            raise
+
+    def post_batch(self, *args: Any, **kwargs: Any) -> int:
+        """
+        Override parent's post_batch to route through Knox.
+
+        Args:
+            *args: Positional arguments for batch configuration.
+            **kwargs: Keyword arguments for batch configuration.
+
+        Returns:
+            Batch ID as integer.
+
+        """
+        batch_config = self._build_batch_from_config(*args, **kwargs)
+
+        self.log.info("Submitting Livy batch with config: %s", batch_config)
+
+        result = self.run_method(endpoint="/batches", method="POST", data=batch_config)
+
+        batch_id = result.get("id")
+        self.log.info("Batch submitted successfully. ID: %s, State: %s", batch_id, result.get("state"))
+
+        return batch_id
+
+    def _add_required_fields(self, batch_config: dict[str, Any], kwargs: dict[str, Any]) -> None:
+        """
+        Add required fields to batch configuration.
+
+        Args:
+            batch_config: Batch configuration dictionary to update.
+            kwargs: Keyword arguments containing field values.
+
+        Raises:
+            AirflowException: If required 'file' parameter is missing.
+
+        """
+        if "file" in kwargs:
+            batch_config["file"] = kwargs["file"]
+        else:
+            raise AirflowException("'file' parameter is required for Livy batch")
+
+    def _add_optional_string_fields(self, batch_config: dict[str, Any], kwargs: dict[str, Any]) -> None:
+        """
+        Add optional string fields to batch configuration.
+
+        Args:
+            batch_config: Batch configuration dictionary to update.
+            kwargs: Keyword arguments containing field values.
+
+        """
+        string_field_mapping = {
+            "class_name": "className",
+            "queue": "queue",
+            "name": "name",
+            "proxy_user": "proxyUser",
+        }
+
+        for kwarg_key, config_key in string_field_mapping.items():
+            if kwargs.get(kwarg_key):
+                batch_config[config_key] = kwargs[kwarg_key]
+
+    def _add_optional_list_fields(self, batch_config: dict[str, Any], kwargs: dict[str, Any]) -> None:
+        """
+        Add optional list fields to batch configuration.
+
+        Args:
+            batch_config: Batch configuration dictionary to update.
+            kwargs: Keyword arguments containing field values.
+
+        """
+        list_field_mapping = {
+            "args": "args",
+            "jars": "jars",
+            "py_files": "pyFiles",
+            "files": "files",
+            "archives": "archives",
+        }
+
+        for kwarg_key, config_key in list_field_mapping.items():
+            if kwargs.get(kwarg_key):
+                batch_config[config_key] = kwargs[kwarg_key]
+
+    def _add_resource_fields(self, batch_config: dict[str, Any], kwargs: dict[str, Any]) -> None:
+        """
+        Add resource allocation fields to batch configuration.
+
+        Args:
+            batch_config: Batch configuration dictionary to update.
+            kwargs: Keyword arguments containing field values.
+
+        """
+        resource_field_mapping = {
+            "driver_memory": "driverMemory",
+            "driver_cores": "driverCores",
+            "executor_memory": "executorMemory",
+            "executor_cores": "executorCores",
+            "num_executors": "numExecutors",
+        }
+
+        for kwarg_key, config_key in resource_field_mapping.items():
+            if kwarg_key in kwargs:
+                batch_config[config_key] = kwargs[kwarg_key]
+
+    def _build_batch_from_config(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        """
+        Build Livy batch configuration from operator parameters.
+
+        Ensures all required fields are present.
+
+        Args:
+            *args: Positional arguments (unused).
+            **kwargs: Batch configuration parameters.
+
+        Returns:
+            Dictionary with Livy batch configuration.
+
+        Raises:
+            AirflowException: If required 'file' parameter is missing.
+
+        """
+        batch_config = {}
+
+        self._add_required_fields(batch_config, kwargs)
+
+        self._add_optional_string_fields(batch_config, kwargs)
+
+        self._add_optional_list_fields(batch_config, kwargs)
+
+        self._add_resource_fields(batch_config, kwargs)
+
+        if kwargs.get("conf"):
+            batch_config["conf"] = kwargs["conf"]
+
+        return batch_config
+
+    def get_batch_state(self, session_id: int, *args: Any, **kwargs: Any) -> BatchState:
+        """
+        Get batch state through Knox.
+
+        Args:
+            session_id: Batch session ID.
+
+        Returns:
+            BatchState object expected by parent class.
+
+        """
+        result = self.run_method(endpoint=f"/batches/{session_id}", method="GET")
+
+        state = result.get("state", "unknown").upper()
+        self.log.info("Batch %s state: %s", session_id, state)
+
+        # Map Livy states to BatchState enum
+        state_mapping = {
+            "NOT_STARTED": BatchState.NOT_STARTED,
+            "STARTING": BatchState.STARTING,
+            "RUNNING": BatchState.RUNNING,
+            "IDLE": BatchState.IDLE,
+            "BUSY": BatchState.BUSY,
+            "SHUTTING_DOWN": BatchState.SHUTTING_DOWN,
+            "ERROR": BatchState.ERROR,
+            "DEAD": BatchState.DEAD,
+            "KILLED": BatchState.KILLED,
+            "SUCCESS": BatchState.SUCCESS,
+        }
+
+        return state_mapping.get(state, BatchState.ERROR)
+
+    def get_batch(self, session_id: int) -> dict[str, Any]:
+        """
+        Get batch details through Knox.
+
+        Args:
+            session_id: Batch session ID.
+
+        Returns:
+            Full batch information as dictionary.
+
+        """
+        return self.run_method(endpoint=f"/batches/{session_id}", method="GET")
+
+    def delete_batch(self, session_id: int) -> Any:
+        """
+        Delete a batch through Knox.
+
+        Args:
+            session_id: Batch session ID.
+
+        Returns:
+            Response from delete operation.
+
+        """
+        result = self.run_method(endpoint=f"/batches/{session_id}", method="DELETE")
+        self.log.info("Batch %s deleted", session_id)
+        return result
+
+    def get_batch_logs(
+        self, session_id: int, log_start_position: int = 0, log_batch_size: int = 100
+    ) -> dict[str, Any]:
+        """
+        Get batch logs through Knox.
+
+        Args:
+            session_id: Batch session ID.
+            log_start_position: Starting position for log retrieval.
+            log_batch_size: Number of log lines to retrieve.
+
+        Returns:
+            Dictionary containing log data.
+
+        """
+        return self.run_method(
+            endpoint=f"/batches/{session_id}/log",
+            method="GET",
+            data={"from": log_start_position, "size": log_batch_size},
+        )
+
+    def dump_batch_logs(self, session_id: int) -> None:
+        """
+        Dump all logs for a batch job.
+
+        Args:
+            session_id: Batch session ID.
+
+        """
+        self.log.info("=" * 80)
+        self.log.info("Fetching logs for batch %s", session_id)
+        self.log.info("=" * 80)
+
+        log_start = 0
+        log_batch_size = 100
+
+        while True:
+            log_response = self.get_batch_logs(session_id, log_start, log_batch_size)
+
+            logs = log_response.get("log", [])
+            if not logs:
+                break
+
+            for log_line in logs:
+                self.log.info(log_line)
+
+            # Check if we've fetched all logs
+            total = log_response.get("total", 0)
+            log_start += len(logs)
+
+            if log_start >= total:
+                break
+
+        self.log.info("=" * 80)
+        self.log.info("End of logs for batch %s", session_id)
+        self.log.info("=" * 80)
+
+    def poll_for_completion(
+        self,
+        session_id: int,
+        polling_interval: int = 30,
+        max_polling_attempts: int = 120,
+        output_logs: bool = False,
+    ) -> BatchState:
+        """
+        Poll batch status until completion.
+
+        Args:
+            session_id: Batch ID.
+            polling_interval: Seconds between polls.
+            max_polling_attempts: Maximum polling attempts.
+            output_logs: Whether to output logs.
+
+        Returns:
+            Final batch state.
+
+        Raises:
+            AirflowException: If batch fails or polling times out.
+
+        """
+        self.log.info("Starting to poll batch %s for completion", session_id)
+
+        attempts = 0
+        while attempts < max_polling_attempts:
+            attempts += 1
+
+            state = self.get_batch_state(session_id)
+            batch_info = self.get_batch(session_id)
+
+            app_id = batch_info.get("appId")
+            app_info = batch_info.get("appInfo", {})
+            spark_ui = app_info.get("sparkUiUrl")
+
+            self.log.info(
+                "Poll attempt %s/%s: Batch %s state: %s, AppId: %s, SparkUI: %s",
+                attempts,
+                max_polling_attempts,
+                session_id,
+                state.value,
+                app_id,
+                spark_ui,
+            )
+
+            if state in (
+                BatchState.SUCCESS,
+                BatchState.ERROR,
+                BatchState.DEAD,
+                BatchState.KILLED,
+            ):
+                self.log.info("Batch %s reached terminal state: %s", session_id, state.value)
+
+                self.dump_batch_logs(session_id)
+
+                if state == BatchState.SUCCESS:
+                    self.log.info("Batch %s completed successfully!", session_id)
+                    return state
+
+                self.log.error("Batch %s failed with state: %s", session_id, state.value)
+                raise AirflowException(f"Batch {session_id} failed with state: {state.value}")
+
+            time.sleep(polling_interval)
+
+        self.log.error("Batch %s did not complete within %s attempts", session_id, max_polling_attempts)
+        if output_logs:
+            self.dump_batch_logs(session_id)
+        raise AirflowException(f"Batch {session_id} polling timed out after {max_polling_attempts} attempts")
