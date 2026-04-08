@@ -1,0 +1,139 @@
+"""Generic HTTP hook for Knox Gateway services."""
+
+from typing import Any
+
+import requests
+from airflow.exceptions import AirflowException
+
+from awb_lib.providers.knox.hooks.knox_base_hook import KnoxBaseHook
+
+
+class KnoxHttpHook(KnoxBaseHook):
+    """
+    Generic Hook for REST services via Knox (Livy, WebHDFS, Atlas, etc.).
+
+    Inherits Auth/Session logic from KnoxBaseHook.
+    """
+
+    def __init__(
+        self,
+        service: str,
+        conn_id: str = "knox_default",
+        method: str = "GET",
+        timeout: int = 60,
+    ) -> None:
+        """
+        Initialize the Knox HTTP hook.
+
+        Args:
+            service: Service suffix (e.g. 'livy', 'webhdfs/v1').
+            conn_id: The Airflow connection ID for Knox.
+            method: HTTP method to use.
+            timeout: Request timeout in seconds.
+
+        """
+        super().__init__(conn_id=conn_id)
+        self.service = service
+        self.method = method.upper()
+        self.timeout = timeout
+
+    def _build_url(self, endpoint: str = "") -> str:
+        """
+        Build the complete URL for the request.
+
+        Args:
+            endpoint: API endpoint path.
+
+        Returns:
+            Complete URL string.
+
+        """
+        base_url = self.get_base_url(self.service)
+        return f"{base_url}/{endpoint.strip('/')}"
+
+    def _execute_request(
+        self,
+        session: requests.Session,
+        url: str,
+        params: dict[str, Any] | None,
+        json_data: dict[str, Any] | None,
+        headers: dict[str, str],
+        extra_options: dict[str, Any] | None,
+    ) -> requests.Response:
+        """
+        Execute the HTTP request.
+
+        Args:
+            session: Requests session.
+            url: Complete URL.
+            params: Query parameters.
+            json_data: JSON body data.
+            headers: Request headers.
+            extra_options: Additional request options.
+
+        Returns:
+            Response object.
+
+        Raises:
+            AirflowException: If the request fails.
+
+        """
+        try:
+            response = session.request(
+                method=self.method,
+                url=url,
+                params=params,
+                json=json_data,
+                headers=headers,
+                timeout=self.timeout,
+                **(extra_options or {}),
+            )
+
+            if response.status_code >= 400:
+                self.log.error("Knox Error Body: %s", response.text[:500])
+                response.raise_for_status()
+
+            return response
+
+        except requests.RequestException as e:
+            raise AirflowException(f"Knox Connection Failed ({self.service}): {e}") from e
+
+    def run(
+        self,
+        endpoint: str = "",
+        params: dict[str, Any] | None = None,
+        json_data: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+        extra_options: dict[str, Any] | None = None,
+    ) -> requests.Response:
+        """
+        Execute the HTTP Request.
+
+        Args:
+            endpoint: API endpoint path.
+            params: Query parameters to append to URL.
+            json_data: JSON body data.
+            headers: Additional HTTP headers.
+            extra_options: Additional options for requests.
+
+        Returns:
+            Response object from the HTTP request.
+
+        Raises:
+            AirflowException: If the request fails.
+
+        """
+        session = self.get_knox_session()
+        url = self._build_url(endpoint)
+
+        req_headers = session.headers.copy()
+        if headers:
+            req_headers.update(headers)
+
+        self.log.info("Knox HTTP Request: %s %s", self.method, url)
+        if params:
+            self.log.info("Query params: %s", params)
+        if json_data:
+            self.log.info("JSON body: %s", json_data)
+
+        return self._execute_request(session, url, params, json_data, req_headers, extra_options)
