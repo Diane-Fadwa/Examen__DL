@@ -157,3 +157,187 @@ with DAG(
     "is_dir": true
   }
 ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+from airflow import DAG
+from airflow.providers.http.sensors.http import HttpSensor
+from airflow.exceptions import AirflowSensorTimeout
+from datetime import datetime, timedelta
+import logging
+import json
+
+from knox_livy_hook import KnoxLivyHook
+
+
+# =========================
+# CONFIGURATION
+# =========================
+
+DAG_ID = "file_ingestion_sensor"
+SCRIPT_PATH = "hdfs:///user/ton_user/insert_iceberg_airflow.py"
+
+
+# =========================
+# UTILS
+# =========================
+
+def get_expected_filename(execution_date):
+    return f"file_{execution_date.strftime('%Y_%m_%d')}.csv"
+
+
+def send_event_to_livy(event):
+    """
+    Envoie un event vers Spark via Livy
+    """
+    hook = KnoxLivyHook(conn_id="knox_default")
+
+    logging.info(f"Sending event to Livy: {event}")
+
+    batch_id = hook.post_batch(
+        file=SCRIPT_PATH,
+        args=[json.dumps([event])]
+    )
+
+    hook.poll_for_completion(batch_id)
+
+
+# =========================
+# RESPONSE CHECK
+# =========================
+
+def check_file_arrival(response, **context):
+
+    if response.status_code != 200:
+        logging.warning("API non disponible")
+        return False
+
+    try:
+        data = response.json()
+    except Exception:
+        logging.error("Erreur parsing JSON")
+        return False
+
+    execution_date = context["logical_date"]
+    expected_file = get_expected_filename(execution_date)
+
+    logging.info(f"Recherche du fichier: {expected_file}")
+
+    if isinstance(data, list):
+        files = [f.get("name") for f in data if isinstance(f, dict)]
+
+    elif isinstance(data, dict) and "files" in data:
+        files = data["files"]
+
+    else:
+        logging.warning("Format API inconnu")
+        return False
+
+    logging.info(f"Fichiers disponibles: {files}")
+
+    return expected_file in files
+
+
+# =========================
+# CALLBACK FAILURE
+# =========================
+
+def handle_failure(context):
+
+    exception = context.get("exception")
+    ti = context.get("task_instance")
+
+    if isinstance(exception, AirflowSensorTimeout):
+        job_status = "TIMEDOUT"
+    else:
+        job_status = "FAILED"
+
+    event = {
+        "dag_id": context["dag"].dag_id,
+        "run_id": context["run_id"],
+        "execution_date": str(context["logical_date"]),
+        "event_time": datetime.utcnow().isoformat(),
+        "job_status": job_status,
+        "failed_task": ti.task_id,
+        "duration": int(ti.duration or 0),
+        "source": "SENSOR"
+    }
+
+    logging.error(f"[SENSOR FAILURE EVENT] {event}")
+
+    send_event_to_livy(event)
+
+
+# =========================
+# CALLBACK SUCCESS
+# =========================
+
+def handle_success(context):
+
+    ti = context.get("task_instance")
+
+    event = {
+        "dag_id": context["dag"].dag_id,
+        "run_id": context["run_id"],
+        "execution_date": str(context["logical_date"]),
+        "event_time": datetime.utcnow().isoformat(),
+        "job_status": "SUCCEEDED",   # IMPORTANT (aligné table)
+        "failed_task": "",           # vide
+        "duration": int(ti.duration or 0),
+        "source": "SENSOR"
+    }
+
+    logging.info(f"[SENSOR SUCCESS EVENT] {event}")
+
+    send_event_to_livy(event)
+
+
+# =========================
+# DAG
+# =========================
+
+default_args = {
+    "owner": "airflow",
+    "depends_on_past": False,
+    "retries": 0,
+}
+
+with DAG(
+    dag_id=DAG_ID,
+    default_args=default_args,
+    start_date=datetime(2024, 1, 1),
+    schedule_interval="@daily",
+    catchup=False,
+    tags=["sensor", "iceberg", "monitoring"],
+) as dag:
+
+    wait_for_file = HttpSensor(
+        task_id="wait_for_file",
+
+        http_conn_id="file_api",
+        endpoint="/files",
+        method="GET",
+
+        response_check=check_file_arrival,
+
+        poke_interval=120,
+        timeout=6 * 60 * 60,
+
+        mode="reschedule",
+
+        on_failure_callback=handle_failure,
+        on_success_callback=handle_success,
+    )
+
+    wait_for_file
