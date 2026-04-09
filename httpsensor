@@ -345,6 +345,11 @@ with DAG(
 
 
 
+Traceback (most recent call last):
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/opt/airflow/dags/repo/tracabilite/iceberg_airflow_sensor_dag.py", line 8, in <module>
+    from knox_livy_hook import KnoxLivyHook
+ModuleNotFoundError: No module named 'knox_livy_hook'
 
 from airflow import DAG
 from airflow.providers.http.sensors.http import HttpSensor
@@ -353,7 +358,9 @@ from datetime import datetime, timedelta
 import logging
 import json
 
-from knox_livy_hook import KnoxLivyHook
+from awb_lib.providers.knox.hooks.knox_livy_hook import KnoxLivyHook
+from awb_lib.providers.knox.hooks.knox_http_hook import KnoxLivyHook
+
 
 
 # CONFIGURATION
