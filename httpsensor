@@ -341,3 +341,18 @@ with DAG(
     )
 
     wait_for_file
+
+
+
+
+
+drwxr-xr-x   - cloudera-scm  supergroup           0 2026-04-08 08:03 /tmp/wafasalaf_credit_immobilier
+drwxr-xr-x   - cloudera-scm  supergroup           0 2026-04-08 08:03 /tmp/wafasalaf_epargne
+drwxr-xr-x   - cloudera-scm  supergroup           0 2026-04-08 08:03 /tmp/wafasalaf_historique_paiement_facture
+drwxr-xr-x   - cloudera-scm  supergroup           0 2026-04-08 08:03 /tmp/wafasalaf_mouvement_bancaire
+drwxr-xr-x   - cloudera-scm  supergroup           0 2026-04-08 08:03 /tmp/wafasalaf_revenu_regulier
+drwxr-xr-x   - cloudera-scm  supergroup           0 2026-04-08 08:03 /tmp/wafasalaf_signalitique
+drwxr-xr-x   - cloudera-scm  supergroup           0 2026-04-08 08:03 /tmp/wafasalaf_solde_compte
+drwxr-xr-x   - hive          supergroup           0 2026-04-01 10:02 /tmp/y.zerouali
+drwxr-xr-x   - cloudera-scm  supergroup           0 2024-03-15 14:04 /tmp/zem
+
