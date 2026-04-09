@@ -56,3 +56,13 @@ optional arguments:
 
 
 SSH_REC	ssh		172.31.145.18	22
+
+
+
+
+Traceback (most recent call last):
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/opt/airflow/dags/repo/tracabilite/iceberg_airflow_sensor_dag.py", line 8, in <module>
+    from knox_livy_hook import KnoxLivyHook
+ModuleNotFoundError: No module named 'knox_livy_hook'
+
