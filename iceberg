@@ -31,186 +31,165 @@ spark.sql(
     """
 )
  
-[cdprct@cdp-gateway-01-rct ~]$
-
-CREATE TABLE spark_catalog.awb_rec.icbrg_airflow_flux_status (
-    id_dag STRING,               
-    id_execution STRING,          
-    date_execution TIMESTAMP,     
-    date_evenement TIMESTAMP,     
-    statut_job STRING,            
-    tache_echouee STRING,        
-    duree BIGINT,                 
-    source STRING                 
-)
-USING iceberg
-PARTITIONED BY (days(date_evenement))
-TBLPROPERTIES (
-    'write.distribution-mode' = 'hash',
-    'write.format.default' = 'parquet'
-);
 
 
-26/04/03 12:24:26 ERROR SparkSQLDriver: Failed in [CREATE TABLE spark_catalog.awb_rec.icbrg_airflow_flux_status (
-    id_dag STRING,
-    id_execution STRING,
-    date_execution TIMESTAMP,
-    date_evenement TIMESTAMP,
-    statut_job STRING,
-    tache_echouee STRING,
-    duree BIGINT,
-    source STRING
-)
-USING iceberg
-PARTITIONED BY (days(date_evenement))
-TBLPROPERTIES (
-    'write.distribution-mode' = 'hash',
-    'write.format.default' = 'parquet'
-)]
+from pyspark.sql import SparkSession
+import sys
+import json
+
+def main():
+    data_json = sys.argv[1]
+    rows = json.loads(data_json)
+
+    spark = SparkSession.builder \
+        .appName("Airflow_Iceberg_Insert") \
+        .config("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkSessionCatalog") \
+        .config("spark.sql.catalog.spark_catalog.type", "hive") \
+        .enableHiveSupport() \
+        .getOrCreate()
+
+    df = spark.createDataFrame(rows)
+
+    df = df.selectExpr(
+        "cast(dag_id as string)",
+        "cast(run_id as string)",
+        "cast(execution_date as timestamp)",
+        "cast(event_time as timestamp)",
+        "cast(job_status as string)",
+        "cast(failed_task as string)",
+        "cast(duration as bigint)",
+        "cast(source as string)"
+    )
+
+    df.writeTo("spark_catalog.awb_rec.icbrg_airflow_flux_status").append()
+
+    spark.stop()
+
+if __name__ == "__main__":
+    main()
 
 
 
-[cdprct@cdp-gateway-01-rct ~]$ spark3-shell
-Setting default log level to "WARN".
-To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
-26/04/03 14:39:17 WARN  util.Utils: [main]: Service 'SparkUI' could not bind on port 4040. Attempting port 4041.
-26/04/03 14:39:19 WARN  conf.HiveConf: [main]: HiveConf of name hive.metastore.runworker.in does not exist
-26/04/03 14:39:19 WARN  conf.HiveConf: [main]: HiveConf of name hive.masking.algo does not exist
-26/04/03 14:40:34 ERROR cluster.YarnClientSchedulerBackend: [main]: The YARN application has already ended! It might have been killed or the Application Master may have failed to start. Check the YARN application logs for more details.
-26/04/03 14:40:34 ERROR spark.SparkContext: [main]: Error initializing SparkContext.
-org.apache.spark.SparkException: Application application_1774970917045_0345 was killed by user cloudera-scm at 172.31.145.18
-        at org.apache.spark.scheduler.cluster.YarnClientSchedulerBackend.waitForApplication(YarnClientSchedulerBackend.scala:98) ~[spark-yarn_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.scheduler.cluster.YarnClientSchedulerBackend.start(YarnClientSchedulerBackend.scala:65) ~[spark-yarn_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.scheduler.TaskSchedulerImpl.start(TaskSchedulerImpl.scala:222) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.SparkContext.<init>(SparkContext.scala:611) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.SparkContext$.getOrCreate(SparkContext.scala:2730) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.sql.SparkSession$Builder.$anonfun$getOrCreate$2(SparkSession.scala:953) ~[spark-sql_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at scala.Option.getOrElse(Option.scala:189) ~[scala-library-2.12.15.jar:?]
-        at org.apache.spark.sql.SparkSession$Builder.getOrCreate(SparkSession.scala:947) ~[spark-sql_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.Main$.createSparkSession(Main.scala:106) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at $line3.$read$$iw$$iw.<init>(<console>:15) ~[scala-library-2.12.15.jar:?]
-        at $line3.$read$$iw.<init>(<console>:42) ~[scala-library-2.12.15.jar:?]
-        at $line3.$read.<init>(<console>:44) ~[scala-library-2.12.15.jar:?]
-        at $line3.$read$.<init>(<console>:48) ~[scala-library-2.12.15.jar:?]
-        at $line3.$read$.<clinit>(<console>) ~[scala-library-2.12.15.jar:?]
-        at $line3.$eval$.$print$lzycompute(<console>:7) ~[scala-library-2.12.15.jar:?]
-        at $line3.$eval$.$print(<console>:6) ~[scala-library-2.12.15.jar:?]
-        at $line3.$eval.$print(<console>) ~[scala-library-2.12.15.jar:?]
-        at jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[?:?]
-        at jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62) ~[?:?]
-        at jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) ~[?:?]
-        at java.lang.reflect.Method.invoke(Method.java:566) ~[?:?]
-        at scala.tools.nsc.interpreter.IMain$ReadEvalPrint.call(IMain.scala:747) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain$Request.loadAndRun(IMain.scala:1020) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain.$anonfun$interpret$1(IMain.scala:568) ~[scala-compiler-2.12.15.jar:?]
-        at scala.reflect.internal.util.ScalaClassLoader.asContext(ScalaClassLoader.scala:36) ~[scala-reflect-2.12.15.jar:?]
-        at scala.reflect.internal.util.ScalaClassLoader.asContext$(ScalaClassLoader.scala:116) ~[scala-reflect-2.12.15.jar:?]
-        at scala.reflect.internal.util.AbstractFileClassLoader.asContext(AbstractFileClassLoader.scala:41) ~[scala-reflect-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain.loadAndRunReq$1(IMain.scala:567) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain.interpret(IMain.scala:594) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain.interpret(IMain.scala:564) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain.$anonfun$quietRun$1(IMain.scala:216) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain.beQuietDuring(IMain.scala:206) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain.quietRun(IMain.scala:216) ~[scala-compiler-2.12.15.jar:?]
-        at org.apache.spark.repl.SparkILoop.$anonfun$initializeSpark$2(SparkILoop.scala:83) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at scala.collection.immutable.List.foreach(List.scala:431) ~[scala-library-2.12.15.jar:?]
-        at org.apache.spark.repl.SparkILoop.$anonfun$initializeSpark$1(SparkILoop.scala:83) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.java:23) ~[scala-library-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.ILoop.savingReplayStack(ILoop.scala:97) ~[scala-compiler-2.12.15.jar:?]
-        at org.apache.spark.repl.SparkILoop.initializeSpark(SparkILoop.scala:83) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.SparkILoop.$anonfun$process$4(SparkILoop.scala:165) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.java:23) ~[scala-library-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.ILoop.$anonfun$mumly$1(ILoop.scala:166) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain.beQuietDuring(IMain.scala:206) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.ILoop.mumly(ILoop.scala:163) ~[scala-compiler-2.12.15.jar:?]
-        at org.apache.spark.repl.SparkILoop.loopPostInit$1(SparkILoop.scala:153) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.SparkILoop.$anonfun$process$10(SparkILoop.scala:221) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.SparkILoop.withSuppressedSettings$1(SparkILoop.scala:189) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.SparkILoop.startup$1(SparkILoop.scala:201) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.SparkILoop.process(SparkILoop.scala:236) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.Main$.doMain(Main.scala:78) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.Main$.main(Main.scala:58) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.Main.main(Main.scala) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[?:?]
-        at jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62) ~[?:?]
-        at jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) ~[?:?]
-        at java.lang.reflect.Method.invoke(Method.java:566) ~[?:?]
-        at org.apache.spark.deploy.JavaMainApplication.start(SparkApplication.scala:52) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.deploy.SparkSubmit.org$apache$spark$deploy$SparkSubmit$$runMain(SparkSubmit.scala:1058) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.deploy.SparkSubmit.doRunMain$1(SparkSubmit.scala:182) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.deploy.SparkSubmit.submit(SparkSubmit.scala:205) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.deploy.SparkSubmit.doSubmit(SparkSubmit.scala:92) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.deploy.SparkSubmit$$anon$2.doSubmit(SparkSubmit.scala:1147) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.deploy.SparkSubmit$.main(SparkSubmit.scala:1156) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.deploy.SparkSubmit.main(SparkSubmit.scala) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-26/04/03 14:40:34 WARN  cluster.YarnSchedulerBackend$YarnSchedulerEndpoint: [main]: Attempted to send shutdown message before the AM has registered!
-26/04/03 14:40:34 WARN  cluster.YarnSchedulerBackend$YarnSchedulerEndpoint: [dispatcher-event-loop-2]: Attempted to request executors before the AM has registered!
-26/04/03 14:40:34 WARN  metrics.MetricsSystem: [main]: Stopping a MetricsSystem that is not running
-26/04/03 14:40:34 ERROR repl.Main: [main]: Failed to initialize Spark session.
-org.apache.spark.SparkException: Application application_1774970917045_0345 was killed by user cloudera-scm at 172.31.145.18
-        at org.apache.spark.scheduler.cluster.YarnClientSchedulerBackend.waitForApplication(YarnClientSchedulerBackend.scala:98) ~[spark-yarn_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.scheduler.cluster.YarnClientSchedulerBackend.start(YarnClientSchedulerBackend.scala:65) ~[spark-yarn_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.scheduler.TaskSchedulerImpl.start(TaskSchedulerImpl.scala:222) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.SparkContext.<init>(SparkContext.scala:611) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.SparkContext$.getOrCreate(SparkContext.scala:2730) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.sql.SparkSession$Builder.$anonfun$getOrCreate$2(SparkSession.scala:953) ~[spark-sql_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at scala.Option.getOrElse(Option.scala:189) ~[scala-library-2.12.15.jar:?]
-        at org.apache.spark.sql.SparkSession$Builder.getOrCreate(SparkSession.scala:947) ~[spark-sql_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.Main$.createSparkSession(Main.scala:106) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at $line3.$read$$iw$$iw.<init>(<console>:15) ~[scala-library-2.12.15.jar:?]
-        at $line3.$read$$iw.<init>(<console>:42) ~[scala-library-2.12.15.jar:?]
-        at $line3.$read.<init>(<console>:44) ~[scala-library-2.12.15.jar:?]
-        at $line3.$read$.<init>(<console>:48) ~[scala-library-2.12.15.jar:?]
-        at $line3.$read$.<clinit>(<console>) ~[scala-library-2.12.15.jar:?]
-        at $line3.$eval$.$print$lzycompute(<console>:7) ~[scala-library-2.12.15.jar:?]
-        at $line3.$eval$.$print(<console>:6) ~[scala-library-2.12.15.jar:?]
-        at $line3.$eval.$print(<console>) ~[scala-library-2.12.15.jar:?]
-        at jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[?:?]
-        at jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62) ~[?:?]
-        at jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) ~[?:?]
-        at java.lang.reflect.Method.invoke(Method.java:566) ~[?:?]
-        at scala.tools.nsc.interpreter.IMain$ReadEvalPrint.call(IMain.scala:747) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain$Request.loadAndRun(IMain.scala:1020) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain.$anonfun$interpret$1(IMain.scala:568) ~[scala-compiler-2.12.15.jar:?]
-        at scala.reflect.internal.util.ScalaClassLoader.asContext(ScalaClassLoader.scala:36) ~[scala-reflect-2.12.15.jar:?]
-        at scala.reflect.internal.util.ScalaClassLoader.asContext$(ScalaClassLoader.scala:116) ~[scala-reflect-2.12.15.jar:?]
-        at scala.reflect.internal.util.AbstractFileClassLoader.asContext(AbstractFileClassLoader.scala:41) ~[scala-reflect-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain.loadAndRunReq$1(IMain.scala:567) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain.interpret(IMain.scala:594) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain.interpret(IMain.scala:564) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain.$anonfun$quietRun$1(IMain.scala:216) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain.beQuietDuring(IMain.scala:206) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain.quietRun(IMain.scala:216) ~[scala-compiler-2.12.15.jar:?]
-        at org.apache.spark.repl.SparkILoop.$anonfun$initializeSpark$2(SparkILoop.scala:83) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at scala.collection.immutable.List.foreach(List.scala:431) ~[scala-library-2.12.15.jar:?]
-        at org.apache.spark.repl.SparkILoop.$anonfun$initializeSpark$1(SparkILoop.scala:83) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.java:23) ~[scala-library-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.ILoop.savingReplayStack(ILoop.scala:97) ~[scala-compiler-2.12.15.jar:?]
-        at org.apache.spark.repl.SparkILoop.initializeSpark(SparkILoop.scala:83) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.SparkILoop.$anonfun$process$4(SparkILoop.scala:165) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.java:23) ~[scala-library-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.ILoop.$anonfun$mumly$1(ILoop.scala:166) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.IMain.beQuietDuring(IMain.scala:206) ~[scala-compiler-2.12.15.jar:?]
-        at scala.tools.nsc.interpreter.ILoop.mumly(ILoop.scala:163) ~[scala-compiler-2.12.15.jar:?]
-        at org.apache.spark.repl.SparkILoop.loopPostInit$1(SparkILoop.scala:153) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.SparkILoop.$anonfun$process$10(SparkILoop.scala:221) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.SparkILoop.withSuppressedSettings$1(SparkILoop.scala:189) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.SparkILoop.startup$1(SparkILoop.scala:201) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.SparkILoop.process(SparkILoop.scala:236) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.Main$.doMain(Main.scala:78) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.Main$.main(Main.scala:58) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.repl.Main.main(Main.scala) ~[spark-repl_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[?:?]
-        at jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62) ~[?:?]
-        at jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) ~[?:?]
-        at java.lang.reflect.Method.invoke(Method.java:566) ~[?:?]
-        at org.apache.spark.deploy.JavaMainApplication.start(SparkApplication.scala:52) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.deploy.SparkSubmit.org$apache$spark$deploy$SparkSubmit$$runMain(SparkSubmit.scala:1058) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.deploy.SparkSubmit.doRunMain$1(SparkSubmit.scala:182) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.deploy.SparkSubmit.submit(SparkSubmit.scala:205) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.deploy.SparkSubmit.doSubmit(SparkSubmit.scala:92) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.deploy.SparkSubmit$$anon$2.doSubmit(SparkSubmit.scala:1147) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.deploy.SparkSubmit$.main(SparkSubmit.scala:1156) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-        at org.apache.spark.deploy.SparkSubmit.main(SparkSubmit.scala) ~[spark-core_2.12-3.3.2.3.3.7190.9-1.jar:3.3.2.3.3.7190.9-1]
-[cdprct@cdp-gateway-01-rct ~]$
 
+iceberg_airflow_batch_dag.py
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from datetime import datetime
+import requests
+import json
+import logging
+
+from knox_livy_hook import KnoxLivyHook
+
+AIRFLOW_API = "http://airflow/api/v1"
+SCRIPT_PATH = "hdfs:///user/ton_user/insert_iceberg_airflow.py"
+
+
+def collect_task_instances(**context):
+
+    events = []
+
+    dags = requests.get(f"{AIRFLOW_API}/dags").json().get("dags", [])
+
+    for dag in dags:
+        dag_id = dag["dag_id"]
+
+        runs = requests.get(
+            f"{AIRFLOW_API}/dags/{dag_id}/dagRuns"
+        ).json().get("dag_runs", [])
+
+        for run in runs:
+
+            run_id = run["dag_run_id"]
+            state = run["state"]
+
+            if state not in ["success", "failed"]:
+                continue
+
+            tasks = requests.get(
+                f"{AIRFLOW_API}/dags/{dag_id}/dagRuns/{run_id}/taskInstances"
+            ).json().get("task_instances", [])
+
+            for task in tasks:
+                events.append({
+                    "dag_id": dag_id,
+                    "run_id": run_id,
+                    "execution_date": run["execution_date"],
+                    "event_time": datetime.utcnow().isoformat(),
+                    "job_status": state.upper(),
+                    "failed_task": task["task_id"] if state == "failed" else "",
+                    "duration": int(task.get("duration") or 0),
+                    "source": "BATCH"
+                })
+
+    logging.info(f"{len(events)} events collectés")
+    return events
+
+
+def send_to_livy(**context):
+
+    events = context["ti"].xcom_pull(task_ids="collect")
+
+    if not events:
+        return
+
+    hook = KnoxLivyHook(conn_id="knox_default")
+
+    batch_id = hook.post_batch(
+        file=SCRIPT_PATH,
+        args=[json.dumps(events)],
+        conf={
+            "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkSessionCatalog",
+            "spark.sql.catalog.spark_catalog.type": "hive"
+        }
+    )
+
+    hook.poll_for_completion(batch_id)
+
+
+with DAG(
+    dag_id="iceberg_airflow_batch",
+    start_date=datetime(2024, 1, 1),
+    schedule_interval="@hourly",
+    catchup=False,
+) as dag:
+
+    collect = PythonOperator(
+        task_id="collect",
+        python_callable=collect_task_instances
+    )
+
+    send = PythonOperator(
+        task_id="send",
+        python_callable=send_to_livy
+    )
+
+    collect >> send
+
+
+
+
+def handle_failure(context):
+    from knox_livy_hook import KnoxLivyHook
+    import json
+    from datetime import datetime
+
+    ti = context["task_instance"]
+
+    event = {
+        "dag_id": context["dag"].dag_id,
+        "run_id": context["run_id"],
+        "execution_date": str(context["logical_date"]),
+        "event_time": datetime.utcnow().isoformat(),
+        "job_status": "TIMEDOUT",
+        "failed_task": ti.task_id,
+        "duration": int(ti.duration or 0),
+        "source": "SENSOR"
+    }
+
+    hook = KnoxLivyHook(conn_id="knox_default")
+
+    hook.post_batch(
+        file="hdfs:///user/ton_user/insert_iceberg_airflow.py",
+        args=[json.dumps([event])]
+    )
