@@ -390,3 +390,13 @@ class KnoxLivyHook(LivyHook):
         if output_logs:
             self.dump_batch_logs(session_id)
         raise AirflowException(f"Batch {session_id} polling timed out after {max_polling_attempts} attempts")
+
+
+
+
+airflow-dags
+awb_lib
+providers
+knox
+hooks
+knox_livy_hook.py
