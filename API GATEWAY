@@ -1,0 +1,341 @@
+[cdprct@cdp-gateway-01-rct MEFA]$ ll
+total 75612
+drwxrwxr-x  2 cdprct cdprct     4096 Nov 11  2025 airflow3_here
+-rw-rw-r--  1 cdprct cdprct      134 Nov 28 12:20 airflow.keytab
+drwxrwxr-x  3 cdprct cdprct     4096 Jan 30 16:31 airflow_poc
+drwxr-xrwx  4 cdprct cdprct     4096 Mar 27 12:10 aita_dashb
+-rwxr-xrwx  1 cdprct cdprct    78494 Feb 21  2025 aita-data-obs-ingestion-tracker.jar
+drwxrwxr-x  6 cdprct cdprct     4096 Aug  1  2025 apache-maven-3.6.3
+drwxrwxr-x  3 cdprct cdprct     4096 Oct  9  2025 appetence
+-rwxr-xrwx  1 cdprct cdprct      514 Feb 21  2025 application.conf
+drwxrwxr-x  3 cdprct cdprct     4096 Aug  1  2025 applications_utils
+drwxrwxr-x  3 cdprct cdprct     4096 Aug  1  2025 audit
+drwxr-xrwx  8 cdprct cdprct     4096 Mar 20  2024 automated_checks
+drwxr-xrwx  8 cdprct cdprct     4096 Dec 30  2024 ccs-pykerberos-master
+-rw-rw-r--  1 cdprct cdprct    31059 Jan 16 08:58 check.py
+-rw-r--r--  1 cdprct cdprct     9122 Jul 29  2025 check_structure_get_metadata_filiale.sh
+-rw-rw-r--  1 cdprct cdprct      781 Mar 30 10:58 clean.sh
+-rw-rw-r--  1 cdprct cdprct       28 Apr 22 14:24 client.properties
+drwxr-xrwx  2 cdprct cdprct     4096 Apr 15  2024 compaction_play
+drwxr-xrwx  2 cdprct cdprct     4096 Dec 27  2023 compression_playbook
+-rw-rw-r--  1 cdprct cdprct     4595 Jan 16 09:00 contract_ebk_web_device_history.yml
+-rwxr-xrwx  1 cdprct cdprct     7420 Jan 28  2025 c.sh
+-rw-rw-r--  1 cdprct cdprct   501704 May 20  2025 ctn_20250520.txt
+-rw-rw-r--  1 cdprct cdprct        9 Sep 10  2025 daily_20250910.txt
+-rw-rw-r--  1 cdprct cdprct        9 Sep 10  2025 daily_20250911.txt
+-rw-rw-r--  1 cdprct cdprct      169 Sep 11  2025 daily_20250912.zip
+drwxr-xrwx  7 cdprct cdprct     4096 Jan 22  2025 data_observability
+drwxr-xrwx  2 cdprct cdprct     4096 May  5  2025 data_obs_prd
+drwxr-xrwx  5 cdprct cdprct     4096 Oct 14  2025 dbt
+-rw-rw-r--  1 cdprct cdprct      754 Oct  6  2025 d.sh
+-rw-rw-r--  1 cdprct cdprct        9 Sep 11  2025 d.txt
+drwxr-xrwx  5 cdprct cdprct     4096 Oct 18  2024 env
+drwxr-xrwx  2 cdprct cdprct     4096 Nov 26  2024 experim_put
+drwxr-xrwx  2 cdprct cdprct     4096 Jun 24  2025 extraction
+-rwxr-xrwx  1 cdprct cdprct  1903818 Nov 22  2024 Extraction-wafacash.jar
+drwxr-xrwx  3 cdprct cdprct     4096 Oct 30  2025 filiale
+-rw-r--r--  1 cdprct cdprct      315 Mar  3 10:10 filiale_actionnaire_tchad_20241210.txt
+-rw-r--r--  1 cdprct cdprct      316 Mar  3 10:10 filiale_actionnaire_tchad_20250305.txt
+-rw-rw-r--  1 cdprct cdprct     5338 Feb  2 10:39 filiale_client.json
+-rw-rw-r--  1 cdprct cdprct     1027 Mar 24 11:03 filiale_devise.json
+-rw-rw-r--  1 cdprct cdprct       33 Jun 30  2025 filiale_exposed_sid.txt
+-rw-r--r--  1 cdprct cdprct  4215310 Jul 15  2025 filiale_monetique_transaction_hist_card_dbt_poc_scb_20250715.txt
+-rw-r--r--  1 cdprct cdprct  4585454 May 14  2025 filiale_monetique_transaction_hist_card_dbt_scb_20250514.txt
+drwxr-xrwx  3 cdprct cdprct     4096 Jul 18  2024 fraude_scenarios_preprocessed
+drwxrwxr-x  5 cdprct cdprct     4096 Mar 10 12:32 gateway_api
+drwxrwxr-x 10 cdprct cdprct     4096 May 20 14:41 gateway-edi-api
+-rwxr-xrwx  1 cdprct cdprct        0 Feb 21  2025 ingestion_tracker_config.json
+-rwxr-xrwx  1 cdprct cdprct    35893 Jan 29  2025 ingestion_tracker_config.json.bkp
+drwxr-xrwx  2 cdprct cdprct     4096 Oct 18  2024 ingestion_tracker_impala
+-rw-rw-r--  1 cdprct cdprct    40250 Apr 24 13:40 ingest.py
+-rwxr-xrwx  1 cdprct cdprct      579 Jul 19  2024 install_traitement_wf.sh
+drwxrwxr-x  2 cdprct cdprct     4096 Dec 25 17:43 jks
+drwxr-xrwx  5 cdprct cdprct     4096 Dec 30  2024 krb_env
+-rw-rw-r--  1 cdprct cdprct     1174 Dec 25 10:25 k.sh
+-rw-rw-r--  1 cdprct cdprct     1387 Apr 27 17:40 launch.sh
+drwxr-xrwx  3 cdprct cdprct     4096 Feb 13  2025 layerizer
+-rwxr-xrwx  1 cdprct cdprct   200872 Feb 21  2025 layerizer.jar
+drwxr-xrwx  2 cdprct cdprct     4096 Nov 14  2024 layerizer_playbook
+-rw-rw-r--  1 cdprct cdprct   120956 Oct 10  2025 log_oozie.txt
+drwxr-xrwx  2 cdprct cdprct     4096 Apr 26  2024 logs
+-rwxr-xrwx  1 cdprct cdprct     2275 Jan 16  2025 logs.log
+drwxr-xrwx  4 cdprct cdprct     4096 Jan 31  2025 mep
+drwxr-xrwx  2 cdprct cdprct     4096 Mar 25  2024 oncall_bad
+-rwxr-xrwx  1 cdprct cdprct     4052 Mar 12  2024 oozie_comparator.py
+-rwxr-xrwx  1 cdprct cdprct     3035 Mar 15  2024 oozie_performance.py
+drwxrwxr-x  5 cdprct cdprct     4096 Apr 23 16:35 otelenv
+drwxrwxr-x  5 cdprct cdprct     4096 Apr 24 11:24 otelpack
+-rw-------  1 cdprct cdprct  8589768 Apr 24 11:30 otel-spark-arch.tar.gz
+-rw-------  1 cdprct cdprct 36306290 Apr 27 17:13 otel-spark.zip
+drwxr-xrwx 11 cdprct cdprct     4096 Jul  2  2025 partitioning
+drwxr-xrwx  3 cdprct cdprct     4096 Dec 30  2024 poc
+drwxr-xrwx  2 cdprct cdprct     4096 Mar 12  2025 preprocessed
+drwxr-xrwx  2 cdprct cdprct     4096 Dec  9  2024 preprocessed_bkp
+drwxr-xrwx  2 cdprct cdprct     4096 Jun  3  2024 python_scripts
+-rwxr-xrwx  1 cdprct cdprct 10134599 Jan  8  2025 registre_refus_20250108.csv
+-rwxr-xrwx  1 cdprct cdprct 10291205 Jan  8  2025 registre_refus_20250109.csv
+-rw-rw-r--  1 cdprct cdprct       75 Apr 23 16:40 req-otel.txt
+-rw-rw-r--  1 cdprct cdprct      113 Apr 24 11:24 req.txt
+-rw-rw-r--  1 cdprct cdprct      312 Jan 16 09:03 run_check.sh
+-rwxr-xrwx  1 cdprct cdprct      522 Sep  6  2024 run_layerizer.sh
+-rw-rw-r--  1 cdprct cdprct        8 Jul 15  2025 sales_ABM_20250514.txt
+drwxrwxr-x  3 cdprct cdprct     4096 Jul 21  2025 schedule_dashb
+drwxr-xrwx  3 cdprct cdprct     4096 Apr 23  2025 scp
+drwxr-xrwx  8 cdprct cdprct     4096 May 21 16:48 scripts
+drwxr-xrwx  4 cdprct cdprct     4096 Jul 25  2025 selfcare
+-rw-rw-r--  1 cdprct cdprct     2767 Apr 23 17:55 send_trace.py
+-rw-rw-r--  1 cdprct cdprct        0 Sep  9  2025 sensor.txt
+drwxr-xrwx  2 cdprct cdprct     4096 May  5 15:20 streaming-selfcare
+drwxr-xrwx  2 cdprct cdprct     4096 Dec  5  2023 testjar
+-rw-rw-r--  1 cdprct cdprct     2632 Dec 26 15:11 th.py
+drwxrwxr-x  5 cdprct cdprct     4096 Apr 24 13:51 tmp
+-rw-rw-r--  1 cdprct cdprct        3 Aug  7  2025 t.txt
+-rwxr-xrwx  1 cdprct cdprct    20480 Jun  4  2025 typescript
+-rw-rw-r--  1 cdprct cdprct     3350 Jul 15  2025 validate_file.sh
+drwxr-xrwx  5 cdprct cdprct     4096 Dec  4  2024 venv
+drwxr-xrwx  4 cdprct cdprct     4096 Nov 21  2024 workflow-ingestion_tracker
+drwxr-xrwx  3 cdprct cdprct     4096 Mar 14  2025 workflows_morocco
+[cdprct@cdp-gateway-01-rct MEFA]$
+[cdprct@cdp-gateway-01-rct MEFA]$ cd gateway_api/
+[cdprct@cdp-gateway-01-rct gateway_api]$ cd airflow_poc/
+[cdprct@cdp-gateway-01-rct airflow_poc]$ ll
+total 101516
+drwxrwxr-x  2 cdprct cdprct     4096 Apr 18 02:25 api_logs
+-rw-rw-r--  1 cdprct cdprct    21768 Nov 24 16:44 app.py
+-rw-rw-r--  1 cdprct cdprct    37337 Jan  6 14:28 app.pybkp
+drwxrwxr-x 42 cdprct cdprct     4096 May 20 11:35 Archive
+-rw-rw-r--  1 cdprct cdprct 52833879 Feb 25 14:36 BKS_Data.zip
+-rw-rw-r--  1 cdprct cdprct     1939 Dec  9 10:55 cert.pem
+-rw-rw-r--  1 cdprct cdprct    19907 Jan  2 12:43 check_contract.py
+-rwxrwxr-x  1 cdprct cdprct     5461 Dec 19 11:03 check_metadata_api.sh
+-rw-rw-r--  1 cdprct cdprct     7688 Dec 10 14:52 check_metadata.sh
+-rw-r--r--  1 cdprct cdprct    38975 Apr 16 10:05 check_meta_from_contract.py
+-rw-rw-r--  1 cdprct cdprct    30769 Jan  2 16:46 check_meta.py
+-rw-rw-r--  1 cdprct cdprct    21878 Dec 30 14:21 check_m.py
+drwx------  3 cdprct cdprct     4096 Jan 29 17:50 configs
+-rw-r--r--  1 cdprct cdprct      166 Jan 29 17:39 configs.zip
+-rw-rw-r--  1 cdprct cdprct     4606 Jan  2 15:57 contract_ebk_web_device_history.yml
+drwxrwxr-x  2 cdprct cdprct     4096 Mar  4 11:37 Data
+-rw-r--r--  1 cdprct cdprct    29975 Dec  8 10:50 document_joint_20251205.txt
+drwxr-xr-x 13 cdprct cdprct     4096 Dec 11 15:30 ebk_web_device_history
+-rw-r--r--  1 cdprct cdprct  3530244 Jan  2 12:48 ebk_web_device_history_20250501.txt
+drwxrwxr-x  5 cdprct cdprct     4096 Nov 24 16:45 env
+-rw-rw-r--  1 cdprct cdprct      333 Jan  6 14:24 filiale_operation_tchad_20241128.zip
+-rwxrwxr-x  1 cdprct cdprct     2057 Jan 27 11:54 filiale_put_hdfs.sh
+-rw-rw-r--  1 cdprct cdprct     4098 May  8 17:42 filiale_virements_locaux_biat_2026050507365800.txt
+drwxr-xr-x  4 cdprct cdprct     4096 Aug  2  2019 hdfs3-0.3.1
+-rw-rw-r--  1 cdprct cdprct    44522 Dec  3 14:01 hdfs3-0.3.1.tar.gz
+drwxrwxr-x  2 cdprct cdprct     4096 Dec  8 10:17 hi
+-rw-rw-r--  1 cdprct cdprct        0 Apr  6 10:37 ice_runner.py
+drwxrwxr-x 11 cdprct cdprct     4096 May 21 09:18 Input
+-rw-------  1 cdprct cdprct     3272 Dec  9 10:54 key.pem
+-rw-rw-r--  1 cdprct cdprct     7556 Nov 27 12:12 load.py
+-rw-rw-r--  1 cdprct cdprct     4712 Mar 19 15:45 load_test_knox.sh
+drwxrwxr-x  2 cdprct cdprct     4096 Mar 25 11:09 load_test_results_20260325_110906
+drwxrwxr-x  2 cdprct cdprct     4096 Mar 26 15:48 load_test_results_20260326_154842
+drwxrwxr-x  2 cdprct cdprct     4096 Nov 26 12:13 logs
+-rw-rw-r--  1 cdprct cdprct      249 Dec  1 14:20 log.sh
+-rw-rw-r--  1 cdprct cdprct        6 Dec 15 12:12 l.txt
+-rw-------  1 cdprct cdprct   186986 May 20 15:07 nohup.out
+-rw-rw-r--  1 cdprct cdprct      499 Jan 16 10:16 put_hdfs_exp.sh
+-rwxrwxr-x  1 cdprct cdprct      499 Jan 16 10:34 put_hdfs.sh
+-rwxrwxr-x  1 cdprct cdprct      515 Dec 12 17:41 puthdfs.sh
+-rw-rw-r--  1 cdprct cdprct      916 Dec  4 17:57 put.sh
+-rw-rw-r--  1 cdprct cdprct      916 Dec  4 18:12 puts.sh
+-rw-rw-r--  1 cdprct cdprct 42747508 Dec  3 13:58 pyarrow-21.0.0-cp39-cp39-manylinux_2_28_x86_64.whl
+drwxrwxr-x  2 cdprct cdprct     4096 Apr 18 02:15 __pycache__
+drwxrwxr-x  5 cdprct cdprct     4096 Apr  6 10:27 pyice
+drwxrwxr-x  3 cdprct cdprct     4096 Dec 18 14:28 rejected
+-rw-rw-r--  1 cdprct cdprct      124 Apr  6 10:34 req.txt
+-rw-rw-r--  1 cdprct cdprct      386 Jan  2 11:54 run_check.sh
+-rw-r--r--  1 cdprct cdprct   937984 Apr 17 13:00 runs.db
+-rw-rw-r--  1 cdprct cdprct       42 Dec  1 13:28 run.sh
+-rw-rw-r--  1 cdprct cdprct  1475930 Nov 27 12:19 scenari
+-rw-rw-r--  1 cdprct cdprct  1475932 Nov 27 12:21 scenarios.html
+drwxrwxr-x  2 cdprct cdprct   294912 Nov 27 12:00 script_logs
+-rw-rw-r--  1 cdprct cdprct      271 Jan  6 13:43 service.json
+drwxrwxr-x  2 cdprct cdprct     4096 Apr 13 14:23 Tes
+-rw-rw-r--  1 cdprct cdprct       21 Jan  5 14:13 test.txt
+[cdprct@cdp-gateway-01-rct airflow_poc]$
+[cdprct@cdp-gateway-01-rct airflow_poc]$
+[cdprct@cdp-gateway-01-rct airflow_poc]$
+[cdprct@cdp-gateway-01-rct airflow_poc]$ cd ..
+[cdprct@cdp-gateway-01-rct gateway_api]$ cd ..
+[cdprct@cdp-gateway-01-rct MEFA]$ cd gateway
+gateway_api/     gateway-edi-api/
+[cdprct@cdp-gateway-01-rct MEFA]$ cd gateway-edi-api/
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$ ll
+total 12620
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 15 17:00 api_logs
+-rw-rw-r-- 1 cdprct cdprct    38079 Jan 23 13:52 app.py
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 15 17:22 Archive
+-rw-rw-r-- 1 cdprct cdprct     1939 Jan 15 16:42 cert.pem
+drwxrwxr-x 5 cdprct cdprct     4096 Jan 15 16:34 env
+drwxrwxr-x 5 cdprct cdprct     4096 Jan 19 12:00 hh
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 15 17:20 Input
+-rw------- 1 cdprct cdprct     3272 Jan 15 16:42 key.pem
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 15 17:23 mm
+-rw------- 1 cdprct cdprct 10335982 May 20 15:07 nohup.out
+-rwxrwxr-x 1 cdprct cdprct       10 Jan 15 17:09 put.sh
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 23 13:52 __pycache__
+-rw-rw-r-- 1 cdprct cdprct       46 Jan 19 12:01 requirements.txt
+-rw-r--r-- 1 cdprct cdprct  2486272 May 20 14:41 runs.db
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 15 17:00 script_logs
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$ tail -n 10 nohup.out
+2026-05-20 15:00:04,992 | INFO     | gateway_api | Renamed /opt/workspace/Script/MEFA/gateway_api/airflow_poc/Input/client_20260217.txt -> /opt/workspace/Script/MEFA/gateway_api/airflow_poc/Input/client_20260217.txt._PROCESSING_
+INFO:     172.31.171.136:36792 - "POST /rename-files HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+2026-05-20 15:07:54,394 | INFO     | gateway_api | ============================================================
+2026-05-20 15:07:54,396 | INFO     | gateway_api | Gateway API shutting down
+2026-05-20 15:07:54,397 | INFO     | gateway_api | Active runs: 0
+2026-05-20 15:07:54,397 | INFO     | gateway_api | ============================================================
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1647758]
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$ ll
+total 12620
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 15 17:00 api_logs
+-rw-rw-r-- 1 cdprct cdprct    38079 Jan 23 13:52 app.py
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 15 17:22 Archive
+-rw-rw-r-- 1 cdprct cdprct     1939 Jan 15 16:42 cert.pem
+drwxrwxr-x 5 cdprct cdprct     4096 Jan 15 16:34 env
+drwxrwxr-x 5 cdprct cdprct     4096 Jan 19 12:00 hh
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 15 17:20 Input
+-rw------- 1 cdprct cdprct     3272 Jan 15 16:42 key.pem
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 15 17:23 mm
+-rw------- 1 cdprct cdprct 10335982 May 20 15:07 nohup.out
+-rwxrwxr-x 1 cdprct cdprct       10 Jan 15 17:09 put.sh
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 23 13:52 __pycache__
+-rw-rw-r-- 1 cdprct cdprct       46 Jan 19 12:01 requirements.txt
+-rw-r--r-- 1 cdprct cdprct  2486272 May 20 14:41 runs.db
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 15 17:00 script_logs
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$ ls -ltr
+total 12620
+drwxrwxr-x 5 cdprct cdprct     4096 Jan 15 16:34 env
+-rw-rw-r-- 1 cdprct cdprct     1939 Jan 15 16:42 cert.pem
+-rw------- 1 cdprct cdprct     3272 Jan 15 16:42 key.pem
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 15 17:00 script_logs
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 15 17:00 api_logs
+-rwxrwxr-x 1 cdprct cdprct       10 Jan 15 17:09 put.sh
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 15 17:20 Input
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 15 17:22 Archive
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 15 17:23 mm
+drwxrwxr-x 5 cdprct cdprct     4096 Jan 19 12:00 hh
+-rw-rw-r-- 1 cdprct cdprct       46 Jan 19 12:01 requirements.txt
+-rw-rw-r-- 1 cdprct cdprct    38079 Jan 23 13:52 app.py
+drwxrwxr-x 2 cdprct cdprct     4096 Jan 23 13:52 __pycache__
+-rw-r--r-- 1 cdprct cdprct  2486272 May 20 14:41 runs.db
+-rw------- 1 cdprct cdprct 10335982 May 20 15:07 nohup.out
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$ nohup uvicorn app:app --ssl-keyfile ./key.pem --ssl-certfile ./cert.pem --port 10111 --host 0.0.0.0 &
+[1] 1852704
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$ nohup: ignoring input and appending output to 'nohup.out'
+nohup: failed to run command 'uvicorn': No such file or directory
+^C
+[1]+  Exit 127                nohup uvicorn app:app --ssl-keyfile ./key.pem --ssl-certfile ./cert.pem --port 10111 --host 0.0.0.0
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$ source env/
+bin/        include/    lib/        lib64/      pyvenv.cfg
+[cdprct@cdp-gateway-01-rct gateway-edi-api]$ source env/bin/activate
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$ nohup uvicorn app:app --ssl-keyfile ./key.pem --ssl-certfile ./cert.pem --port 10111 --host 0.0.0.0 &
+[1] 1852812
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$ nohup: ignoring input and appending output to 'nohup.out'
+
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$ tail -n 10 nohup.out
+2026-05-22 10:01:26,122 | INFO     | gateway_api | API key authentication: disabled
+INFO:     Started server process [1852812]
+INFO:     Waiting for application startup.
+2026-05-22 10:01:26,201 | INFO     | gateway_api | ============================================================
+2026-05-22 10:01:26,201 | INFO     | gateway_api | Gateway API starting up
+2026-05-22 10:01:26,201 | INFO     | gateway_api | Worker PID: 1852812
+2026-05-22 10:01:26,201 | INFO     | gateway_api | ============================================================
+2026-05-22 10:01:26,209 | INFO     | gateway_api | Database initialized successfully with SQLAlchemy
+INFO:     Application startup complete.
+INFO:     Uvicorn running on https://0.0.0.0:10111 (Press CTRL+C to quit)
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$ ps aux | grep uvicorn
+cdprct   1852812  1.0  0.1 394244 67972 pts/2    Sl   10:01   0:00 /opt/workspace/Script/MEFA/gateway-edi-api/env/bin/python /opt/workspace/Script/MEFA/gateway-edi-api/env/bin/uvicorn app:app --ssl-keyfile ./key.pem --ssl-certfile ./cert.pem --port 10111 --host 0.0.0.0
+cdprct   1854102  0.0  0.0 224880  3164 pts/2    S+   10:02   0:00 grep --color=auto uvicorn
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$ kill 1852812
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+[1]+  Terminated              nohup uvicorn app:app --ssl-keyfile ./key.pem --ssl-certfile ./cert.pem --port 10111 --host 0.0.0.0
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$ source .
+./        ../       .conf.sh
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$ source .
+./        ../       .conf.sh
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$ source .conf.sh
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$ nohup uvicorn app:app --ssl-keyfile ./key.pem --ssl-certfile ./cert.pem --port 10111 --host 0.0.0.0 &
+[1] 1854351
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$ nohup: ignoring input and appending output to 'nohup.out'
+
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
+(env) [cdprct@cdp-gateway-01-rct gateway-edi-api]$
